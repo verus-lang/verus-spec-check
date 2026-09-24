@@ -1,0 +1,17 @@
+# Build artifacts
+target/
+
+# Bolero coverage-guided fuzzing artifacts. `cargo bolero test` writes the
+# per-target corpus and crash inputs under `src/__fuzz__/`; these are
+# machine-generated and shouldn't be tracked.
+**/__fuzz__/
+
+# Editor + OS
+*.rs.bk
+.DS_Store
+*.swp
+*.swo
+
+# Nix
+result
+result-*

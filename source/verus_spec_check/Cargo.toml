@@ -1,0 +1,25 @@
+[package]
+name = "verus_spec_check"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Property-based testing for Verus (umbrella crate that bundles verus_spec_check_macros + verus_spec_check_runtime)"
+keywords = ["verus", "verified-rust", "verification", "proptest"]
+categories = ["development-tools"]
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+verus_spec_check_macros = { path = "../macros" }
+verus_spec_check_runtime = { path = "../runtime", default-features = false }
+verus_spec_check_vstd_ext = { path = "../vstd_ext" }
+
+[features]
+default = ["bolero"]
+bolero = ["verus_spec_check_runtime/bolero"]
+
+[lints]
+workspace = true

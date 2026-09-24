@@ -1,0 +1,22 @@
+[package]
+name = "verus_spec_check_assert"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Inline `#[vcheck] assert(...)` discovery and rewriting for the verus-spec-check engine. Internal crate: no stability guarantees."
+keywords = ["verus", "verified-rust", "verification", "proptest"]
+categories = ["development-tools"]
+
+[lib]
+name = "verus_spec_check_assert"
+path = "src/lib.rs"
+
+[dependencies]
+proc-macro2.workspace = true
+quote.workspace = true
+verus_syn.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,20 @@
+::verus_spec_check::verus_spec_check_unverified!{
+    external_vcheck_provide!{
+        fn is_sorted(s : Seq<i64>) -> bool {
+            let mut i = 0;
+            while i + 1 < s.len() {
+                if s[i] > s[i + 1] {
+                    return false;
+                }
+                i += 1;
+            }
+            true
+        }
+    }
+    #[verifier::external_body]
+    #[doc = "__verus_spec_check_harness_marker__"]
+    pub fn is_input_sorted(s : &[i64]) -> (b : bool) ensures b == is_sorted(s.deep_view()),
+    {
+        true
+    }
+}

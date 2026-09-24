@@ -1,0 +1,10 @@
+::verus_spec_check::verus_spec_check_unverified!{
+    #[doc = "__verus_spec_check_harness_marker__"]
+    fn forgot_contract(a : u8, b : u8) -> (r : u8) {
+        if a >= b {
+            a - b
+        } else {
+            b - a
+        }
+    }
+}

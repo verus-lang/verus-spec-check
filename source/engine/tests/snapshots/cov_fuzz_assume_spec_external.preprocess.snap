@@ -1,0 +1,19 @@
+#[vcheck_cov_fuzz]
+pub assume_specification[u32::checked_add](x : u32, y : u32) -> (r : Option<u32>) ensures r.is_some() ==> r.unwrap() == x + y,
+r.is_none() ==> x + y > u32::MAX,
+;
+::verus_spec_check::verus_spec_check_unverified!{
+    #[vcheck_cov_fuzz]
+    #[verifier::external_body]
+    #[inline(never)]
+    #[doc = "verus_spec_check::assume_spec_target = u32::checked_add"]
+    #[doc = "__verus_spec_check_harness_marker__"]
+    pub exec fn __vcheck_assume_u32_checked_add(x : u32, y : u32) -> (r : Option<u32>) ensures r.is_some() ==> r.unwrap() == x + y,
+    r.is_none() ==> x + y > u32::MAX,
+    {
+        #[allow(unused_unsafe)]
+        unsafe {
+            u32::checked_add(x, y)
+        }
+    }
+}

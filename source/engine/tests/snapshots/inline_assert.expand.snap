@@ -1,0 +1,48 @@
+::vstd::prelude::verus!{
+    #[allow(unused_imports)]
+    use::verus_spec_check_vstd_ext::*;
+}
+::vstd::prelude::verus!{
+    #[doc = "verus_spec_check::skip_regular_harness"]
+    fn checked_add(a : u16, b : u16) -> (r : u32) ensures r == a as u32 + b as u32,
+    {
+        let r = a as u32 + b as u32;
+        assert(r >= a as u32);
+        r
+    }
+}
+#[cfg(test)]
+#[allow(non_snake_case)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
+mod __verus_spec_check_ID {
+    use super::*;
+    use::verus_spec_check::proptest::prelude::*;
+    use::verus_spec_check_vstd_ext::*;
+    use::verus_spec_check::{
+        VcheckBTreeMapExec,
+        VcheckBTreeSetExec
+    };
+    #[doc = "verus_spec_check::skip_regular_harness"]
+    #[allow(unused_variables, unused_mut, dead_code, non_snake_case)]
+    pub(super) fn __vcheck_assert_0_checked_add(a : u16, b : u16) -> u32 {
+        let r = a as u32 + b as u32;
+        {
+            let __vcheck_check = r >= a as u32;
+            if ! __vcheck_check {
+                ::std::panic!("verus_spec_check: inline assert at checked_add:7 (#[vcheck] marker 0) failed");
+            }
+        };
+        r
+    }
+    proptest!{
+        #![proptest_config(::verus_spec_check::proptest::test_runner::Config {
+            max_global_rejects : 1_000_000,
+            ..::verus_spec_check::proptest::test_runner::Config::default()
+        })] #[test]
+        fn __vcheck_assert_checked_add_at_line7(a in::verus_spec_check::vcheck_strategy::<u16>(), b in::verus_spec_check::vcheck_strategy::<u16>()) {
+            let r = __vcheck_assert_0_checked_add(a, b);
+            let _ = &r;
+        }
+    }
+}

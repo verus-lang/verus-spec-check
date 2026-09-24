@@ -1,0 +1,9 @@
+::verus_spec_check::verus_spec_check_unverified!{
+    #[vcheck_cov_mutate]
+    #[doc = "__verus_spec_check_harness_marker__"]
+    fn strong_double(x : u32) -> (r : u32) requires x <= u32::MAX / 2,
+    ensures r == x * 2,
+    {
+        x + x
+    }
+}

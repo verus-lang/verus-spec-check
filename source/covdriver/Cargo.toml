@@ -1,0 +1,15 @@
+[package]
+name = "verus_spec_check_covdriver"
+version = "0.0.0-2026-08-09-0044"
+edition = "2021"
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "verus-spec-check-covdriver"
+path = "src/main.rs"
+
+[dependencies]
+serde_json = "1"
+
+[workspace]

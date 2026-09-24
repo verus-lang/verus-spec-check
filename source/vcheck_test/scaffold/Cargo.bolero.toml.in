@@ -1,0 +1,45 @@
+# Scaffold manifest for bolero-backend snippet crates
+# (`#[vcheck(mode = "fuzz" | "kani")]`, legacy `backend = "bolero"`).
+# Same placeholders as Cargo.toml.in; see tests/common/mod.rs.
+#
+# Differences from the default scaffold:
+#   - verus_spec_check carries `features = ["bolero"]`
+#   - a `[profile.fuzz]` so `cargo bolero test` works on a materialized case
+#   - `unexpected_cfgs` registers `cfg(kani)`
+[package]
+name = "@NAME@"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+vstd = "=@PIN@"
+# The `bolero` feature turns on the runtime generator layer and the
+# `::verus_spec_check::bolero` re-exports the emitted harness references.
+verus_spec_check = { path = "@ROOT@/source/verus_spec_check", features = ["bolero"] }
+verus_spec_check_vstd_ext = { path = "@ROOT@/source/vstd_ext" }
+verus_builtin_macros = { version = "=@PIN@", features = ["contrib-hooks"] }
+
+[package.metadata.verus]
+verify = true
+
+[patch.crates-io]
+verus_builtin_macros = { path = "@ROOT@/source/builtin_macros_overlay" }
+
+[workspace]
+
+# Used by `cargo bolero test` for the coverage-guided engines. Not needed
+# for plain `cargo test`, but present so `cargo bolero` works on a
+# materialized case.
+[profile.fuzz]
+inherits = "release"
+
+[lints.rust]
+unused_features = "allow"
+# `#[vcheck(mode = "kani")]` harnesses expand to
+# `#[cfg_attr(kani, kani::proof)]`. `kani` is a well-known cfg the Kani
+# tool sets but unknown to rustc in a normal build, so register it to
+# silence `unexpected_cfgs`.
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }

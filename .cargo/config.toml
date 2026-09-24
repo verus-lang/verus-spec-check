@@ -1,0 +1,67 @@
+# Cargo aliases for verus-spec-check. Put a similar block in your
+# downstream project's `.cargo/config.toml` to get the same shortcuts.
+#
+# Cargo aliases CAN'T set environment variables per-alias, so the
+# variants that need a different PROPTEST_CASES value are documented
+# below as shell snippets rather than cargo aliases.
+
+[alias]
+# Quick test run with default proptest settings (256 cases per harness).
+# Use this as the dev-loop alias.
+vcheck = ["test", "--lib"]
+
+# Same as `cargo vcheck` but only shows the harness module's tests
+# (skips any plain unit tests). Useful when the crate has many
+# test surfaces and you only want the vcheck-generated ones.
+vcheck-only = ["test", "--lib", "--", "__verus_spec_check"]
+
+# Show what `cargo vcheck` would compile (useful for inspecting macro
+# expansion and build artifacts without running anything).
+vcheck-build = ["test", "--lib", "--no-run"]
+
+# For higher / lower case counts, use the env-var form directly:
+#
+#   PROPTEST_CASES=64 cargo vcheck          # fast, ~1/4 the default
+#   PROPTEST_CASES=10000 cargo vcheck       # thorough, may catch rare bugs
+#
+# For high case counts with many filtered preconditions, also bump:
+#
+#   PROPTEST_MAX_GLOBAL_REJECTS=1000000 PROPTEST_CASES=10000 cargo vcheck
+
+# --- Bolero backend (for `#[vcheck(mode = "fuzz" | "kani")]` harnesses) ------
+#
+# Under plain `cargo test` (or `cargo vcheck`), bolero harnesses run with
+# bolero's random engine. Its budget is time/iteration based rather than a
+# fixed case count; tune it with:
+#
+#   BOLERO_RANDOM_ITERATIONS=100000 cargo vcheck
+#
+# For coverage-guided fuzzing you need the subcommand + a nightly toolchain
+# (libfuzzer/AFL/honggfuzz use `-Z` sanitizer flags):
+#
+#   cargo install cargo-bolero          # once; Linux also needs
+#                                       # binutils-dev + libunwind-dev
+#   cargo +nightly vcheck-fuzz <harness>                  # libfuzzer (default)
+#   cargo +nightly vcheck-fuzz <harness> --engine kani    # bounded model check
+#
+# `vcheck-fuzz` is an alias for the `cargo bolero test` subcommand. The
+# downstream project also needs a `[profile.fuzz]` in its Cargo.toml (see
+# source/vcheck_test/scaffold/Cargo.bolero.toml.in).
+vcheck-fuzz = ["bolero", "test"]
+
+# --- Kani tier (`#[vcheck(mode = "kani")]` harnesses) -------------------------
+#
+# Under plain `cargo test`, a crate with `mode = "kani"` harnesses runs a
+# synthesized `__vcheck_kani_report` test that drives `cargo kani --tests`
+# itself — the proofs live under the ordinary test interface. Kani can't
+# be shipped as a cargo dependency (its release bundles a toolchain +
+# CBMC), so it needs a one-time setup; this alias is that one command:
+#
+#   cargo vcheck-kani-setup
+#
+# Alternatively let the report install it on first miss with
+# VERUS_SPEC_CHECK_KANI_INSTALL=1, or skip the tier on a machine with
+# VERUS_SPEC_CHECK_KANI=0. NOTE: cargo runs alias arguments as ONE subcommand,
+# so this alias only performs the install half; run `cargo kani setup`
+# after it (the report's failure message spells out both steps).
+vcheck-kani-setup = ["install", "--locked", "kani-verifier"]

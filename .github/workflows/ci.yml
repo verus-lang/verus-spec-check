@@ -1,0 +1,157 @@
+name: CI
+
+# The CI is designed to be _tiered_ to keep most runs cheap
+#
+# * push to main + manual invocation -> only quick checks, e.g. 
+#   overlay reproducibility, workspace building, engine unit tests, 
+#   and verus-spec-check evaluation tests. The Verus binary is _not_ built. 
+#
+# * pull request -> the above _plus_ the building Verus, 
+#   running verus-spec-check verification cases as welll
+#
+# The push trigger is scoped to `main` on purpose, to prevent
+# doublely invoking the CI.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # cancel superseded runs on the same ref
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # we need to disable debuginfo in every cargo invocation, because
+  # vstd and verus_syn are huge, and the CI does not need backtracing
+  CARGO_PROFILE_DEV_DEBUG: 0
+  CARGO_PROFILE_TEST_DEBUG: 0
+  # incremental compilation is pure overhead
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # full history so the docs-only detection below can diff against
+          # the PR base. The repo is small enough that this is cheap
+          fetch-depth: 0
+
+      # reclaim ~20GB of unused preinstalled tooling
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost "$AGENT_TOOLSDIRECTORY/CodeQL" \
+            /usr/local/share/powershell /usr/lib/jvm /opt/hostedtoolcache/go
+          sudo docker image prune --all --force >/dev/null 2>&1 || true
+          df -h /
+
+      # skipping the heavy (verus-dependent) tests when a PR only touches docs
+      - name: Determine whether the heavy tier is needed
+        id: scope
+        run: |
+          set -u
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "not a pull_request; heavy tier decided by per-step conditions"
+            echo "heavy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base="origin/${{ github.base_ref }}"
+          if ! git rev-parse --verify --quiet "$base" >/dev/null; then
+            echo "cannot resolve $base; assuming heavy tier is needed"
+            echo "heavy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only "$base"...HEAD) || {
+            echo "diff failed; assuming heavy tier is needed"
+            echo "heavy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+          if [ -z "$changed" ]; then
+            echo "no changed files detected; assuming heavy tier is needed"
+            echo "heavy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "changed files:"
+          echo "$changed" | sed 's/^/  /'
+          # Docs-only == every path ends in .md or is LICENSE.
+          if echo "$changed" | grep -qvE '(\.md$|^LICENSE$)'; then
+            echo "heavy=true" >> "$GITHUB_OUTPUT"
+            echo "-> code changed; running the heavy tier"
+          else
+            echo "heavy=false" >> "$GITHUB_OUTPUT"
+            echo "-> documentation-only change; skipping the heavy tier"
+          fi
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          extra-conf: |
+            connect-timeout = 20
+            download-attempts = 5
+            stalled-download-timeout = 90
+
+      # ---- QUICK tier: always runs (push + PR + manual) ---------------------
+      # These steps use the nixpkgs Rust toolchain from the dev shell and do
+      # NOT need the Verus binary, so they stay fast
+
+      # Overlay reproducibility: re-running the resync against the pinned
+      # version must produce no changes. 
+      - name: Overlay is reproducible from resync assets
+        run: |
+          VER=$(grep -m1 '^vstd' source/vstd_ext/Cargo.toml | sed -E 's/.*"=([^"]+)".*/\1/')
+          echo "pinned verus_builtin_macros: $VER"
+          nix develop --command bash tools/release/overlay-resync.sh "$VER"
+          git diff --exit-code -- source/builtin_macros_overlay/src \
+            || { echo "::error::overlay src drifted from resync assets"; exit 1; }
+          git diff -- source/builtin_macros_overlay/Cargo.toml \
+            | grep '^[+-]' | grep -vE '^[+-]{3}|^[+-]#' \
+            && { echo "::error::overlay Cargo.toml drifted"; exit 1; } || true
+
+      # zsh comes from the dev shell (flake.nix commonBuildInputs), so this
+      # no longer pays an `apt-get update && install` on every run.
+      - name: Version pin consistency
+        run: nix develop --command zsh tools/check_versions.sh
+
+      - name: Build workspace
+        run: nix develop --command cargo build --workspace
+
+      - name: Engine unit tests
+        run: nix develop --command cargo test -p verus_spec_check_engine
+
+      # Harness evaluation of the verus-spec-check suite. Needs only cargo, and not verus
+      - name: VCHECK harness tests
+        run: nix develop --command cargo test -p verus_spec_check_test -- --skip verify_
+
+      # ---- FULL tier: PRs that touch code -----------------------------------
+      # The Verus-dependent half of the gate, covering every feature
+      - name: Build pinned Verus
+        if: github.event_name == 'pull_request' && steps.scope.outputs.heavy == 'true'
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 20
+          max_attempts: 3
+          retry_wait_seconds: 60
+          command: nix build --print-build-logs
+
+      - name: Install Verus's Rust toolchain
+        if: github.event_name == 'pull_request' && steps.scope.outputs.heavy == 'true'
+        run: |
+          out=$(nix build --no-link --print-out-paths)
+          # first token only; upstream appends "(overridden by ...)"
+          tc=$(grep -oE '"toolchain"[^"]*"[^"]*"' "$out/share/verus/version.json" \
+                 | sed -E 's/.*"toolchain"[^"]*"([^"]*)".*/\1/' \
+                 | awk '{print $1}')
+          [ -n "$tc" ] || { echo "::error::no toolchain in version.json"; exit 1; }
+          echo "Verus requires Rust toolchain: $tc"
+          rustup install "$tc"
+
+      # Verification tier of the snippet suite: one `cargo verus focus` case per
+      # feature area. The test evaluation tier already ran in the quick steps above,
+      # so this filters to `verify_*`
+      - name: Verify tests
+        if: github.event_name == 'pull_request' && steps.scope.outputs.heavy == 'true'
+        run: nix develop --command cargo test -p verus_spec_check_test verify_

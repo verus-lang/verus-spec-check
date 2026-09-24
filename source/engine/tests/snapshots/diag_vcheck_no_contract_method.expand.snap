@@ -1,0 +1,3 @@
+::core::compile_error!{
+    "verus_spec_check: `#[vcheck]` on `Counter::get`, but the fn has no `requires`, `ensures`, or `returns` clause — the harness would run the fn and assert nothing (a vacuous pass). Add a contract clause, or remove the fn-level `#[vcheck]` (a stmt-level `#[vcheck] assert(...)` inside the body keeps working without it)."
+}

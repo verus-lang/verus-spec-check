@@ -1,0 +1,68 @@
+::vstd::prelude::verus!{
+    #[allow(unused_imports)]
+    use::verus_spec_check_vstd_ext::*;
+}
+::vstd::prelude::verus!{
+    #[doc = "verus_spec_check::backend = bolero"]
+    #[doc = "verus_spec_check::bolero::mode = kani"]
+    #[doc = "__verus_spec_check_harness_marker__"]
+    fn safe_add(a : u16, b : u16) -> (r : u32) requires a <= 1000,
+    ensures r == a as u32 + b as u32,
+    {
+        a as u32 + b as u32
+    }
+}
+#[cfg(test)]
+#[allow(non_snake_case)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
+mod __verus_spec_check_ID {
+    use super::*;
+    use::verus_spec_check::proptest::prelude::*;
+    use::verus_spec_check_vstd_ext::*;
+    use::verus_spec_check::{
+        VcheckBTreeMapExec,
+        VcheckBTreeSetExec
+    };
+    #[cfg_attr(kani, kani::proof)]
+    #[test]
+    fn vcheck_safe_add() {
+        #[cfg(not(kani))]
+        static __VCHECK_TESTED :::core::sync::atomic::AtomicU64 =::core::sync::atomic::AtomicU64::new(0);
+        #[cfg(not(kani))]
+        static __VCHECK_SKIPPED :::core::sync::atomic::AtomicU64 =::core::sync::atomic::AtomicU64::new(0);
+        ::verus_spec_check::bolero::check!().with_generator((::verus_spec_check::vcheck_gen::<u16>(),::verus_spec_check::vcheck_gen::<u16>())).cloned().for_each(| (a, b) | {
+            #[cfg(kani)]
+            ::kani::assume({
+                a <= 1000
+            });
+            #[cfg(not(kani))]
+            if!(a <= 1000) {
+                __VCHECK_SKIPPED.fetch_add(1,::core::sync::atomic::Ordering::Relaxed);
+                return;
+            }
+            #[cfg(not(kani))]
+            __VCHECK_TESTED.fetch_add(1,::core::sync::atomic::Ordering::Relaxed);
+            let r = super::safe_add(a, b);
+            ::core::assert!(::verus_spec_check::__vcheck_int::eq(r,::verus_spec_check::__vcheck_int::add(a as u32, b as u32)), "ensures clause failed");
+        });
+        #[cfg(not(kani))]
+        {
+            let __vcheck_tested = __VCHECK_TESTED.load(::core::sync::atomic::Ordering::Relaxed);
+            let __vcheck_skipped = __VCHECK_SKIPPED.load(::core::sync::atomic::Ordering::Relaxed);
+            ::core::assert!(!(__vcheck_tested == 0 &&__vcheck_skipped > 0), "verus_spec_check: vacuous bolero harness: all {} sampled inputs were \
+            rejected by `requires` (or skipped as unspecified-`real` cases), so no contract check ever \
+            ran. Narrow the input generator or run this contract on the proptest backend \
+            (`mode = \"proptest\"`), whose reject tracking tolerates sparse preconditions.", __vcheck_skipped);
+        }
+    }
+    #[test]
+    #[allow(unexpected_cfgs)]
+    #[cfg_attr(miri, ignore)]
+    fn __vcheck_kani_report() {
+        #[cfg(not(any(fuzzing_libfuzzer, fuzzing_afl, fuzzing_honggfuzz, fuzzing_random, kani)))]
+        {
+            ::verus_spec_check::kani_orch::run_kani_report(env!("CARGO_MANIFEST_DIR"), &["vcheck_safe_add"],);
+        }
+    }
+}

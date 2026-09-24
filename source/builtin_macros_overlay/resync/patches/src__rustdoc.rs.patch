@@ -1,0 +1,33 @@
+--- a/src/rustdoc.rs
++++ b/src/rustdoc.rs
+@@ -41,20 +41,21 @@
+ };
+ 
+ /// Check if VERUSDOC=1.
+-#[cfg(verus_keep_ghost)]
++///
++/// Originally used `proc_macro::tracked::env_var` (a nightly feature)
++/// for build-cache invalidation when VERUSDOC changes. We use stable
++/// `std::env::var` here so the overlay compiles without requiring
++/// nightly features in environments where verus's bundled rustc isn't
++/// available. The tradeoff: cargo won't rebuild when VERUSDOC's value
++/// changes, but VERUSDOC is never set in downstream user projects so
++/// this is irrelevant in practice.
+ pub fn env_rustdoc() -> bool {
+-    match proc_macro::tracked::env_var("VERUSDOC") {
+-        Err(_) => false, // VERUSDOC key not present in environment
++    match std::env::var("VERUSDOC") {
++        Err(_) => false,
+         Ok(s) => s == "1",
+     }
+ }
+ 
+-/// Check if VERUSDOC=1.
+-#[cfg(not(verus_keep_ghost))]
+-pub fn env_rustdoc() -> bool {
+-    false
+-}
+-
+ // Main hooks for the verus! macro to manipulate ItemFn, etc.
+ 
+ pub fn process_item_fn(item: &mut ItemFn) {

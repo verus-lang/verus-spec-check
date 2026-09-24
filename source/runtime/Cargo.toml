@@ -1,0 +1,35 @@
+[package]
+name = "verus_spec_check_runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Runtime trait + proptest strategies for the verus_spec_check_macros crate. Re-exports proptest at the pinned version. End-users typically depend on the umbrella `verus_spec_check` crate rather than this one directly."
+keywords = ["verus", "verified-rust", "verification", "proptest"]
+categories = ["development-tools"]
+
+[lib]
+name = "verus_spec_check_runtime"
+path = "src/lib.rs"
+
+[dependencies]
+proptest = "1"
+num-bigint = "0.4"
+num-traits = "0.2"
+num-rational = { version = "0.4", features = ["num-bigint"] }
+bolero = { version = "0.13", optional = true }
+bolero-generator = { version = "0.13", optional = true }
+rustc-demangle = "0.1"
+serde_json = "1"
+# Link-time registry of `#[vcheck_cov_fuzz]` targets across every expansion
+# in the final test binary. Powers the single-pass campaign audit
+# (`VERUS_SPEC_CHECK_COV_CAMPAIGN=1`); resolved at link time, no life-before-main.
+linkme = "0.3"
+
+[features]
+default = ["bolero"]
+bolero = ["dep:bolero", "dep:bolero-generator"]
+
+[lints]
+workspace = true

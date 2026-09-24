@@ -1,0 +1,428 @@
+// Here, we modify each function item by appending rustdoc
+// containing information about the Verus signature that we want to appear
+// in auto-generated rustdoc. For example, we add information about
+// 'requires' and 'ensures' clauses, and we also add 'mode' information.
+// This information would be absent if we tried to run rustdoc without any
+// processing.
+//
+// The flow is:
+//  - the verus! macro (this file) adds extra information into a rustdoc comment
+//  - rustdoc (unmodified) generates the rustdoc HTML
+//  - we run a postprocessor (verusdoc crate) to present the information in a nice way.
+//
+// Specifically, we add "attributes" in a kinda-silly format that the post-processing
+// step can recognize.  The format is:
+//
+//     ```rust
+//     // verusdoc_special_attr $ATTR_NAME
+//     $ATTR_VALUE
+//     ```
+//
+// The ATTR_NAME can be requires, ensures, returns, recommends or modes.
+//
+// The reason we use a codeblock here is that so rustdoc will perform syntax highlighting
+// on the value which is applicable if it's an expression. For example, if it's a
+// requires, ensures, or recommends attribute then ATTR_VALUE will be a (pretty-printed)
+// boolean expression.
+//
+// The other type, 'modes', is a bit more complicated: the value is a JSON blob with
+// some data explaining the function mode, param modes, and return mode.
+
+use proc_macro2::Span;
+use quote::ToTokens;
+use std::iter::FromIterator;
+use verus_syn::punctuated::Punctuated;
+use verus_syn::spanned::Spanned;
+use verus_syn::token;
+use verus_syn::{
+    AssumeSpecification, AttrStyle, Attribute, Block, Expr, ExprBlock, ExprPath, FnArg, FnMode,
+    Ident, ImplItemFn, ItemFn, Pat, PatIdent, Path, PathArguments, PathSegment, Publish, QSelf,
+    ReturnType, Signature, TraitItemFn, Type, TypeGroup, TypePath,
+};
+
+/// Check if VERUSDOC=1.
+///
+/// Originally used `proc_macro::tracked::env_var` (a nightly feature)
+/// for build-cache invalidation when VERUSDOC changes. We use stable
+/// `std::env::var` here so the overlay compiles without requiring
+/// nightly features in environments where verus's bundled rustc isn't
+/// available. The tradeoff: cargo won't rebuild when VERUSDOC's value
+/// changes, but VERUSDOC is never set in downstream user projects so
+/// this is irrelevant in practice.
+pub fn env_rustdoc() -> bool {
+    match std::env::var("VERUSDOC") {
+        Err(_) => false,
+        Ok(s) => s == "1",
+    }
+}
+
+// Main hooks for the verus! macro to manipulate ItemFn, etc.
+
+pub fn process_item_fn(item: &mut ItemFn) {
+    match attr_for_sig(&item.sig, Some(&item.block), None) {
+        Some(attr) => item.attrs.insert(0, attr),
+        None => {}
+    }
+}
+
+pub fn process_item_fn_assume_specification(item: &mut ItemFn, as_spec: &AssumeSpecification) {
+    match attr_for_sig(&item.sig, Some(&item.block), Some(as_spec)) {
+        Some(attr) => item.attrs.insert(0, attr),
+        None => {}
+    }
+}
+
+pub fn process_item_fn_broadcast_group(item: &mut ItemFn) {
+    match attr_for_broadcast_group(&item.sig) {
+        Some(attr) => item.attrs.insert(0, attr),
+        None => {}
+    }
+}
+
+pub fn process_impl_item_method(item: &mut ImplItemFn) {
+    match attr_for_sig(&item.sig, Some(&item.block), None) {
+        Some(attr) => item.attrs.insert(0, attr),
+        None => {}
+    }
+}
+
+pub fn process_trait_item_method(item: &mut TraitItemFn) {
+    match attr_for_sig(&item.sig, item.default.as_ref(), None) {
+        Some(attr) => item.attrs.insert(0, attr),
+        None => {}
+    }
+}
+
+/// Process a signature to get all the information, apply the codeblock
+/// formatting tricks, and then package it all up into a #[doc = "..."] attribute
+/// (as a verus_syn::Attribute object) that we can apply to the item.
+fn attr_for_sig(
+    sig: &Signature,
+    block: Option<&Block>,
+    as_spec: Option<&AssumeSpecification>,
+) -> Option<Attribute> {
+    let mut v = vec![];
+
+    v.push(encoded_sig_info(sig));
+
+    if let Some(with_spec) = &sig.spec.with {
+        v.push(encoded_str("with", &format_with_spec(with_spec)));
+    }
+
+    match &sig.spec.requires {
+        Some(es) => {
+            for expr in es.exprs.exprs.iter() {
+                v.push(encoded_expr("requires", expr));
+            }
+        }
+        None => {}
+    }
+    match &sig.spec.recommends {
+        Some(es) => {
+            for expr in es.exprs.exprs.iter() {
+                v.push(encoded_expr("recommends", expr));
+            }
+        }
+        None => {}
+    }
+    match &sig.spec.ensures {
+        Some(es) => {
+            for expr in es.exprs.exprs.iter() {
+                v.push(encoded_expr("ensures", expr));
+            }
+        }
+        None => {}
+    }
+    match &sig.spec.returns {
+        Some(rs) => {
+            for expr in rs.exprs.exprs.iter() {
+                v.push(encoded_expr("returns", expr));
+            }
+        }
+        None => {}
+    }
+
+    match block {
+        Some(block) => {
+            if is_spec(&sig) {
+                if show_body(sig) {
+                    let b =
+                        Expr::Block(ExprBlock { attrs: vec![], label: None, block: block.clone() });
+                    v.push(encoded_body("body", &b));
+                }
+            }
+        }
+        None => {}
+    }
+
+    if let Some(as_spec) = as_spec {
+        let e = Expr::Path(ExprPath {
+            attrs: vec![],
+            qself: as_spec.qself.clone(),
+            path: as_spec.path.clone(),
+        });
+        v.push(encoded_expr("assume_specification", &e));
+        v.push(assume_specification_link_line(&e));
+    }
+
+    if v.len() == 0 { None } else { Some(doc_attr_from_string(&v.join("\n\n"), sig.span())) }
+}
+
+fn attr_for_broadcast_group(sig: &Signature) -> Option<Attribute> {
+    let mut v = vec![];
+
+    v.push(encoded_str("broadcast_group", ""));
+
+    if v.len() == 0 { None } else { Some(doc_attr_from_string(&v.join("\n\n"), sig.span())) }
+}
+
+fn is_spec(sig: &Signature) -> bool {
+    match &sig.mode {
+        FnMode::Spec(_) | FnMode::SpecChecked(_) => true,
+        FnMode::Proof(_) | FnMode::ProofAxiom(_) | FnMode::Exec(_) | FnMode::Default => false,
+    }
+}
+
+/// Do we want to show the body for the given spec function?
+/// If it's 'open', then yes
+fn show_body(sig: &Signature) -> bool {
+    matches!(sig.publish, Publish::Open(_))
+}
+
+fn fn_mode_to_string(mode: &FnMode, publish: &Publish) -> String {
+    match mode {
+        FnMode::Spec(_) | FnMode::SpecChecked(_) => match publish {
+            Publish::Closed(_) => "closed spec".to_string(),
+            Publish::Open(_) => "open spec".to_string(),
+            Publish::OpenRestricted(res) => {
+                "open(".to_string() + &module_path_to_string(&res.path) + ") spec"
+            }
+            Publish::Uninterp(_) => "uninterp spec".to_string(),
+            Publish::Default => "spec".to_string(),
+        },
+        FnMode::Proof(_) | FnMode::ProofAxiom(_) => "proof".to_string(),
+        FnMode::Exec(_) => "exec".to_string(),
+        FnMode::Default => "exec".to_string(),
+    }
+}
+
+fn module_path_to_string(p: &Path) -> String {
+    // path is for a module; we can ignore type arguments
+
+    let lead = if p.leading_colon.is_some() { "::" } else { "" };
+    let main = p
+        .segments
+        .iter()
+        .map(|path_seg| path_seg.ident.to_string())
+        .collect::<Vec<String>>()
+        .join("::");
+    lead.to_string() + &main
+}
+
+fn encoded_sig_info(sig: &Signature) -> String {
+    let fn_mode = fn_mode_to_string(&sig.mode, &sig.publish);
+    let (ret_mode, ret_name) = match &sig.output {
+        ReturnType::Default => ("Default", "".to_string()),
+        ReturnType::Type(_, tracked_token, opt_name, _) => {
+            let mode = if tracked_token.is_some() { "Tracked" } else { "Default" };
+
+            let name = match opt_name {
+                None => "".to_string(),
+                Some(b) => match &b.1 {
+                    Pat::Ident(PatIdent { ident, .. }) => ident.to_string(),
+                    _ => "".to_string(),
+                },
+            };
+
+            (mode, name)
+        }
+    };
+
+    let param_modes = sig
+        .inputs
+        .iter()
+        .map(|fn_arg| if fn_arg.tracked.is_some() { "\"Tracked\"" } else { "\"Default\"" })
+        .collect::<Vec<&str>>();
+    let param_modes = param_modes.join(",");
+
+    let broadcast = sig.broadcast.is_some();
+
+    // JSON blob is parsed by the verusdoc post-processor into a `DocModeInfo` object.
+    // I decided not to pull in serde as a dependency for verus_builtin_macros,
+    // but if serialization gets too complicated, we should probably do that instead.
+
+    // We put it in a comment to avoid extra syntax highlighting or anything that would
+    // complicate the post-processing.
+
+    let info = format!(
+        r#"// {{ "fn_mode": "{fn_mode:}", "ret_mode": "{ret_mode:}", "param_modes": [{param_modes:}], "broadcast": {broadcast:}, "ret_name": "{ret_name:}" }}"#
+    );
+
+    encoded_str("modes", &info)
+}
+
+/// Get the assume_specification line
+fn assume_specification_link_line(e: &Expr) -> String {
+    // This function applies a series of heuristics to try to get the doc links to work
+    // 1. Change <A>::B to A::B
+    // 2. Not link things we know cannot be linked:
+    //  - Pointer types
+    //  - <Type as Trait>::trait_method constructions
+    let mut can_link = true;
+    let e = match e {
+        Expr::Path(ExprPath {
+            attrs,
+            qself: Some(QSelf { lt_token: _, ty, position: 0, as_token: None, gt_token: _ }),
+            path: Path { leading_colon: Some(leading_colon), segments },
+        }) => {
+            let mut ty = ty;
+
+            if let Type::Group(TypeGroup { group_token: _, elem }) = &**ty {
+                ty = elem;
+            }
+
+            match &**ty {
+                Type::Ptr(_) => {
+                    // Cannot link to pointer types in rustdoc
+                    can_link = false;
+                }
+                _ => {}
+            }
+
+            if let Type::Path(TypePath { qself: None, path: inner_path }) = &**ty {
+                if !inner_path.segments.trailing_punct() && !segments.trailing_punct() {
+                    let mut new_path = inner_path.clone();
+                    new_path.segments.push_punct(leading_colon.clone());
+                    for (i, value) in segments.iter().enumerate() {
+                        new_path.segments.push_value(value.clone());
+                        if i + 1 < segments.len() {
+                            new_path.segments.push_punct(leading_colon.clone());
+                        }
+                    }
+                    &Expr::Path(ExprPath { attrs: attrs.clone(), qself: None, path: new_path })
+                } else {
+                    e
+                }
+            } else {
+                e
+            }
+        }
+        Expr::Path(ExprPath { qself: Some(QSelf { as_token: Some(_), .. }), .. }) => {
+            // Cannot link to implementations of trait methods
+            // https://github.com/rust-lang/rust/issues/74563
+            // FIXME: we could instead link for both the trait method and the implementing type
+            can_link = false;
+            e
+        }
+        _ => e,
+    };
+
+    let s = verus_prettyplease::unparse_expr(&e).replace("\n", " ");
+    if can_link {
+        format!("**Specification for [`{:}`]**", s)
+    } else {
+        format!("**Specification for `{:}`**", s)
+    }
+}
+
+/// Pretty print the expression, then wrap in a code block.
+fn encoded_expr(kind: &str, code: &Expr) -> String {
+    let s = verus_prettyplease::unparse_expr(&code);
+    let s = format!("{s:},");
+    encoded_str(kind, &s)
+}
+
+fn encoded_body(kind: &str, code: &Expr) -> String {
+    let s = verus_prettyplease::unparse_expr(&code);
+    let s = format!("{s:}");
+    encoded_str(kind, &s)
+}
+
+/// Wrap the given string into a code block,
+/// into the format that the postprocessor will recognize.
+fn encoded_str(kind: &str, data: &str) -> String {
+    "```rust\n// verusdoc_special_attr ".to_string() + kind + "\n" + data + "\n```"
+}
+
+fn format_with_spec(with_spec: &verus_syn::WithSpecOnFn) -> String {
+    let mut lines: Vec<String> = vec![];
+
+    let inputs = format_fn_args(&with_spec.inputs);
+    for input in inputs {
+        let input = normalize_ws(input.trim());
+        lines.push(format!("{input},"));
+    }
+
+    if let Some((_, outputs)) = &with_spec.outputs {
+        lines.push("->".to_string());
+        let outputs = format_pat_types(outputs);
+        for output in outputs {
+            let output = normalize_ws(output.trim());
+            lines.push(format!("{output},"));
+        }
+    }
+
+    lines.join("\n")
+}
+
+fn format_pat_types(outputs: &Punctuated<verus_syn::PatType, verus_syn::Token![,]>) -> Vec<String> {
+    if outputs.is_empty() {
+        return vec![];
+    }
+
+    outputs.iter().map(format_pat_type).collect()
+}
+
+fn format_fn_args(inputs: &Punctuated<FnArg, verus_syn::Token![,]>) -> Vec<String> {
+    if inputs.is_empty() {
+        return vec![];
+    }
+    inputs.iter().map(format_fn_arg).collect()
+}
+
+fn format_fn_arg(arg: &FnArg) -> String {
+    let tracked = if arg.tracked.is_some() { "tracked " } else { "" };
+    match &arg.kind {
+        verus_syn::FnArgKind::Receiver(receiver) => {
+            let s = normalize_ws(&receiver.to_token_stream().to_string());
+            format!("{tracked}{s}")
+        }
+        verus_syn::FnArgKind::Typed(pt) => {
+            let s = format_pat_type(pt);
+            format!("{tracked}{s}")
+        }
+    }
+}
+
+fn format_pat_type(pt: &verus_syn::PatType) -> String {
+    let pat = normalize_ws(&verus_prettyplease::unparse_pat(&pt.pat));
+    let ty = normalize_ws(&verus_prettyplease::unparse_ty(&pt.ty));
+    format!("{pat}: {ty}")
+}
+
+fn normalize_ws(s: &str) -> String {
+    s.split_whitespace().collect::<Vec<&str>>().join(" ")
+}
+
+/// Create an attr that looks like #[doc = "doc_str"]
+fn doc_attr_from_string(doc_str: &str, span: Span) -> Attribute {
+    let path = Path {
+        leading_colon: None,
+        segments: Punctuated::from_iter(vec![PathSegment {
+            ident: Ident::new("doc", span),
+            arguments: PathArguments::None,
+        }]),
+    };
+    let lit = verus_syn::Lit::Str(verus_syn::LitStr::new(doc_str, span));
+    let name_value = verus_syn::MetaNameValue {
+        path,
+        eq_token: token::Eq { spans: [span] },
+        value: Expr::Lit(verus_syn::ExprLit { attrs: vec![], lit }),
+    };
+    Attribute {
+        pound_token: token::Pound { spans: [span] },
+        style: AttrStyle::Outer,
+        bracket_token: token::Bracket { span: crate::syntax::into_spans(span) },
+        meta: verus_syn::Meta::NameValue(name_value),
+    }
+}

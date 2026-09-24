@@ -1,0 +1,130 @@
+name: Backfill Release
+
+# Cut a release for an *older* Verus line on demand, e.g. 0.0.0-2026-03-08-0103.
+# Syncs the whole workspace to that version, validates (build + engine tests +
+# snippet suite, including its verify_* cases),
+# and -- if green -- tags verus-<date>. Everything is expressed as tags: the
+# backfill commit is made on the checked-out HEAD and only the *tag* is pushed,
+# so the snapshot lives solely as verus-<date> with no release branch.
+#
+# Feasibility caveat: the current engine is written against a specific verus_syn
+# AST. Backfilling re-pins verus_syn to the older line; if that AST differs, the
+# engine won't compile and this run will red. That's the signal to hand-port the
+# engine: check out the target locally, fix, and either re-run this workflow or
+# tag verus-<date> by hand. Recent lines usually backfill clean; older ones may
+# need porting.
+on:
+  workflow_dispatch:
+    inputs:
+      crate_version:
+        description: "Verus crate version to backfill (e.g. 0.0.0-2026-03-08-0103)"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  # same as ci.yml; vstd and verus_syn debuginfo is huge
+  CARGO_PROFILE_DEV_DEBUG: 0
+  CARGO_PROFILE_TEST_DEBUG: 0
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # reclaim ~20GB of unused preinstalled tooling
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost "$AGENT_TOOLSDIRECTORY/CodeQL" \
+            /usr/local/share/powershell /usr/lib/jvm /opt/hostedtoolcache/go
+          sudo docker image prune --all --force >/dev/null 2>&1 || true
+          df -h /
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v16
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Derive date and tag
+        id: v
+        run: |
+          VER="${{ github.event.inputs.crate_version }}"
+          echo "$VER" | grep -qE '^0\.0\.0-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]+$' \
+            || { echo "::error::invalid crate version '$VER'"; exit 1; }
+          DATE=$(echo "$VER" | sed -E 's/0\.0\.0-([0-9]{4}-[0-9]{2}-[0-9]{2})-.*/\1/')
+          TAG="verus-$DATE"
+          git fetch --tags --quiet
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "::error::tag $TAG already exists; refusing to overwrite a release"
+            exit 1
+          fi
+          {
+            echo "version=$VER"
+            echo "date=$DATE"
+            echo "tag=$TAG"
+          } >> "$GITHUB_OUTPUT"
+
+      # Exit code contract (see the script header): 0 = synced, 3 = no-op
+      - name: Sync workspace to target version
+        run: |
+          set +e
+          bash tools/release/sync-verus.sh "${{ steps.v.outputs.version }}"
+          code=$?
+          set -e
+          if [ "$code" -eq 3 ]; then
+            pin=$(awk '/^vstd *=/{ if (match($0,/"=[^"]+"/)) { print substr($0,RSTART+2,RLENGTH-3); exit } }' source/vstd_ext/Cargo.toml)
+            if [ "$pin" = "${{ steps.v.outputs.version }}" ]; then
+              echo "Workspace already pinned to ${{ steps.v.outputs.version }}; proceeding."
+              exit 0
+            fi
+            echo "::error::${{ steps.v.outputs.version }} is not published on crates.io (or split publish)"
+            exit 1
+          fi
+          exit "$code"
+
+      - name: Build pinned Verus
+        run: nix build --print-build-logs
+
+      - name: Install Verus's Rust toolchain
+        run: |
+          out=$(nix build --no-link --print-out-paths)
+          # first token only; upstream appends "(overridden by ...)"
+          tc=$(grep -oE '"toolchain"[^"]*"[^"]*"' "$out/share/verus/version.json" \
+                 | sed -E 's/.*"toolchain"[^"]*"([^"]*)".*/\1/' \
+                 | awk '{print $1}')
+          [ -n "$tc" ] || { echo "::error::no toolchain in version.json"; exit 1; }
+          echo "Verus requires Rust toolchain: $tc"
+          rustup install "$tc"
+
+      # Same gate as ci.yml's full tier. The per-example sweep is not run here:
+      # it rebuilds the dependency stack once per example and OOMs the runner.
+      - name: Validate (build + engine tests + snippet suite)
+        run: |
+          nix develop --command cargo build --workspace
+          nix develop --command cargo test -p verus_spec_check_engine
+          nix develop --command cargo test -p verus_spec_check_test
+
+      - name: Tag and release (tag only, no branch)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.v.outputs.tag }}
+          VER: ${{ steps.v.outputs.version }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Commit the sync on the checked-out HEAD, then push ONLY the tag.
+          # The remote branch is never touched; the snapshot exists solely as
+          # the tag. (latest is not moved — this is an older line, not newest.)
+          git add -A
+          git commit -m "chore: backfill verus-spec-check for Verus $VER"
+          git tag -a "$TAG" -m "verus-spec-check for Verus $VER (backfill)"
+          git push origin "$TAG"
+          gh release create "$TAG" --title "$TAG" \
+            --notes "verus-spec-check backfilled for Verus \`$VER\`. Clone \`--branch $TAG\`; see README."

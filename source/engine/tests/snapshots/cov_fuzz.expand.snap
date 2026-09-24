@@ -1,0 +1,167 @@
+::vstd::prelude::verus!{
+    #[allow(unused_imports)]
+    use::verus_spec_check_vstd_ext::*;
+}
+::vstd::prelude::verus!{
+    #[doc = "__verus_spec_check_harness_marker__"]
+    fn clamp_sum(a : u8, b : u8) -> (r : u16) requires a as u16 + b as u16 <= 400,
+    ensures r == a as u16 + b as u16,
+    {
+        if a > 10 &&b > 10 {
+            a as u16 + b as u16
+        } else {
+            a as u16 + b as u16
+        }
+    }
+}
+#[cfg(test)]
+#[allow(non_snake_case)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
+mod __verus_spec_check_ID {
+    use super::*;
+    use::verus_spec_check::proptest::prelude::*;
+    use::verus_spec_check_vstd_ext::*;
+    use::verus_spec_check::{
+        VcheckBTreeMapExec,
+        VcheckBTreeSetExec
+    };
+    proptest!{
+        #![proptest_config(::verus_spec_check::proptest::test_runner::Config {
+            max_global_rejects : 1_000_000,
+            ..::verus_spec_check::proptest::test_runner::Config::default()
+        })] #[test]
+        fn vcheck_clamp_sum(a in::verus_spec_check::vcheck_strategy::<u8>(), b in::verus_spec_check::vcheck_strategy::<u8>()) {
+            ::verus_spec_check::proptest::prop_assume!(::verus_spec_check::__vcheck_int::le(::verus_spec_check::__vcheck_int::add(a as u16, b as u16), 400), "requires clause rejected");
+            let r = super::clamp_sum(a, b);
+            ::verus_spec_check::proptest::prop_assert!(::verus_spec_check::__vcheck_int::eq(r,::verus_spec_check::__vcheck_int::add(a as u16, b as u16)), "ensures clause failed");
+        }
+    }
+    #[allow(clippy::declare_interior_mutable_const, dead_code)]
+    const __VCHECK_COVF_FALSE_INIT :::core::sync::atomic::AtomicBool =::core::sync::atomic::AtomicBool::new(false);
+    static __VCHECK_COVF_HITS_0_clamp_sum : [::core::sync::atomic::AtomicBool; 3usize] = [__VCHECK_COVF_FALSE_INIT; 3usize];
+    static __VCHECK_COVF_COVERED_0_clamp_sum : [::core::sync::atomic::AtomicBool; 3usize] = [__VCHECK_COVF_FALSE_INIT; 3usize];
+    static __VCHECK_COVF_INDETERMINATE_0_clamp_sum : [::core::sync::atomic::AtomicBool; 3usize] = [__VCHECK_COVF_FALSE_INIT; 3usize];
+    static __VCHECK_COVF_SCRATCH_0_clamp_sum : [::core::sync::atomic::AtomicBool; 3usize] = [__VCHECK_COVF_FALSE_INIT; 3usize];
+    #[allow(non_snake_case, dead_code)]
+    pub(super) fn __vcheck_covmark_0_clamp_sum(__vcheck_i : usize) {
+        if let::core::option::Option::Some(__vcheck_b) = __VCHECK_COVF_HITS_0_clamp_sum.get(__vcheck_i) {
+            __vcheck_b.store(true,::core::sync::atomic::Ordering::Relaxed);
+        }
+        if let::core::option::Option::Some(__vcheck_b) = __VCHECK_COVF_SCRATCH_0_clamp_sum.get(__vcheck_i) {
+            __vcheck_b.store(true,::core::sync::atomic::Ordering::Relaxed);
+        }
+    }
+    #[doc = "__verus_spec_check_harness_marker__"]
+    #[allow(unused_variables, unused_mut, dead_code, non_snake_case)]
+    pub(super) fn __vcheck_covfuzz_fn_0_clamp_sum(a : u8, b : u8) -> u16 {
+        if a > 10 &&{
+            __vcheck_covmark_0_clamp_sum(2usize);
+            b > 10
+        }
+        {
+            __vcheck_covmark_0_clamp_sum(0usize);
+            a as u16 + b as u16
+        } else {
+            __vcheck_covmark_0_clamp_sum(1usize);
+            a as u16 + b as u16
+        }
+    }
+    #[allow(non_snake_case, unused_variables, unused_mut, dead_code)]
+    pub(super) fn __vcheck_covfuzz_run_0_clamp_sum() ->::verus_spec_check::cov_fuzz::CovFuzzRunStats {
+        use::verus_spec_check::bolero_generator::ValueGenerator;
+        #[allow(clippy::declare_interior_mutable_const)]
+        const __VCHECK_COVF_FALSE :::core::sync::atomic::AtomicBool =::core::sync::atomic::AtomicBool::new(false);
+        static __VCHECK_COVF_GUIDE : [::core::sync::atomic::AtomicBool; 1usize] = [__VCHECK_COVF_FALSE; 1usize];
+        static __VCHECK_COVF_RUN_LOCK :::std::sync::Mutex<()> =::std::sync::Mutex::new(());
+        let _vcheck_run_guard = __VCHECK_COVF_RUN_LOCK.lock().unwrap_or_else(| poisoned | poisoned.into_inner());
+        for __vcheck_bit in __VCHECK_COVF_HITS_0_clamp_sum.iter().chain(__VCHECK_COVF_COVERED_0_clamp_sum.iter()).chain(__VCHECK_COVF_INDETERMINATE_0_clamp_sum.iter()).chain(__VCHECK_COVF_SCRATCH_0_clamp_sum.iter()).chain(__VCHECK_COVF_GUIDE.iter()) {
+            __vcheck_bit.store(false,::core::sync::atomic::Ordering::Relaxed);
+        }
+        let __vcheck_gen = (::verus_spec_check::vcheck_gen::<u8>(),::verus_spec_check::vcheck_gen::<u8>());
+        let __vcheck_opts =::core::default::Default::default();
+        let mut __vcheck_probe_checks = [0u64; 0usize];
+        let mut __vcheck_probe_violations = [0u64; 0usize];
+        let mut __vcheck_stats =::verus_spec_check::cov_fuzz::coverage_guided_loop(&[&__VCHECK_COVF_HITS_0_clamp_sum[..], &__VCHECK_COVF_COVERED_0_clamp_sum[..], &__VCHECK_COVF_INDETERMINATE_0_clamp_sum[..], &__VCHECK_COVF_GUIDE[..],], &mut | __vcheck_bytes : &[u8] | {
+            let mut __vcheck_driver =::verus_spec_check::bolero_generator::driver::ByteSliceDriver::new(__vcheck_bytes, &__vcheck_opts,);
+            let::core::option::Option::Some((a, b)) = ValueGenerator::generate(&__vcheck_gen, &mut __vcheck_driver) else {
+                return::verus_spec_check::cov_fuzz::ExecOutcome::Invalid;
+            };
+            if {
+                ::verus_spec_check::__vcheck_int::le(::verus_spec_check::__vcheck_int::add(a as u16, b as u16), 400)
+            }
+            {
+                __VCHECK_COVF_GUIDE[0usize].store(true,::core::sync::atomic::Ordering::Relaxed);
+            } else {
+                return::verus_spec_check::cov_fuzz::ExecOutcome::Skipped;
+            }
+            for __vcheck_s in __VCHECK_COVF_SCRATCH_0_clamp_sum.iter() {
+                __vcheck_s.store(false,::core::sync::atomic::Ordering::Relaxed);
+            }
+            let r = __vcheck_covfuzz_fn_0_clamp_sum(a, b);
+            let __vcheck_engaged = (true);
+            let __vcheck_engagement_indeterminate = !__vcheck_engaged &&false;
+            if __vcheck_engaged {
+                for(__vcheck_s, __vcheck_c) in __VCHECK_COVF_SCRATCH_0_clamp_sum.iter().zip(__VCHECK_COVF_COVERED_0_clamp_sum.iter()) {
+                    if __vcheck_s.load(::core::sync::atomic::Ordering::Relaxed) {
+                        __vcheck_c.store(true,::core::sync::atomic::Ordering::Relaxed,);
+                    }
+                }
+            } else if __vcheck_engagement_indeterminate {
+                for(__vcheck_s, __vcheck_i) in __VCHECK_COVF_SCRATCH_0_clamp_sum.iter().zip(__VCHECK_COVF_INDETERMINATE_0_clamp_sum.iter()) {
+                    if __vcheck_s.load(::core::sync::atomic::Ordering::Relaxed) {
+                        __vcheck_i.store(true,::core::sync::atomic::Ordering::Relaxed,);
+                    }
+                }
+            }
+            let _ = &r;
+            ::verus_spec_check::cov_fuzz::ExecOutcome::Tested
+        },);
+        __vcheck_stats.probes =::std::vec![];
+        __vcheck_stats
+    }
+    #[allow(non_snake_case, dead_code)]
+    pub(super) fn __vcheck_covext_record_0_clamp_sum() ->::verus_spec_check::cov_fuzz::CovExtRecording {
+        ::core::default::Default::default()
+    }
+    static __VCHECK_COV_FUZZ_TARGETS : [::verus_spec_check::cov_fuzz::VcheckCovFuzzTarget; 1usize] = [::verus_spec_check::cov_fuzz::VcheckCovFuzzTarget {
+        target_id : concat!(module_path!(), "::cov_fuzz:", stringify!(0usize)),
+        fn_name : "clamp_sum",
+        file : file!(),
+        branch_cap_hit : false,
+        branches : &[::verus_spec_check::cov_fuzz::VcheckCovFuzzBranch {
+            idx : 0u32,
+            line : 8u32,
+            description : "if (then branch)",
+        },::verus_spec_check::cov_fuzz::VcheckCovFuzzBranch {
+            idx : 1u32,
+            line : 8u32,
+            description : "if (else branch)",
+        },::verus_spec_check::cov_fuzz::VcheckCovFuzzBranch {
+            idx : 2u32,
+            line : 8u32,
+            description : "`&&` right operand evaluated (left was true)",
+        }],
+        hits : &__VCHECK_COVF_HITS_0_clamp_sum,
+        covered : &__VCHECK_COVF_COVERED_0_clamp_sum,
+        indeterminate : &__VCHECK_COVF_INDETERMINATE_0_clamp_sum,
+        unlowerable_ensures : &[],
+        run : __vcheck_covfuzz_run_0_clamp_sum,
+        threshold :::std::option::Option::None,
+        skip : false,
+        external :::std::option::Option::None,
+    }];
+    #[::verus_spec_check::cov_fuzz::linkme::distributed_slice(::verus_spec_check::cov_fuzz::VCHECK_COV_FUZZ_REGISTRY)]
+    #[linkme(crate =::verus_spec_check::cov_fuzz::linkme)]
+    #[allow(non_upper_case_globals)]
+    static __VCHECK_COV_FUZZ_REGISTRY_ENTRY :::verus_spec_check::cov_fuzz::VcheckCovFuzzRegistryEntry =::verus_spec_check::cov_fuzz::VcheckCovFuzzRegistryEntry {
+        crate_dir : env!("CARGO_MANIFEST_DIR"),
+        targets : &__VCHECK_COV_FUZZ_TARGETS,
+    };
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    #[allow(non_snake_case)]
+    fn __vcheck_cov_fuzz_report() {
+        ::verus_spec_check::cov_fuzz::run_cov_fuzz_report(env!("CARGO_MANIFEST_DIR"), &__VCHECK_COV_FUZZ_TARGETS,);
+    }
+}

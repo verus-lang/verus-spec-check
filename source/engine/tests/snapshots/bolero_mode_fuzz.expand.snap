@@ -1,0 +1,94 @@
+::vstd::prelude::verus!{
+    #[allow(unused_imports)]
+    use::verus_spec_check_vstd_ext::*;
+}
+::vstd::prelude::verus!{
+    #[doc = "verus_spec_check::backend = bolero"]
+    #[doc = "verus_spec_check::bolero::mode = fuzz"]
+    #[doc = "__verus_spec_check_harness_marker__"]
+    fn safe_double(x : u16) -> (r : u32) ensures r == 2 * x as u32,
+    {
+        2 * x as u32
+    }
+}
+#[cfg(test)]
+#[allow(non_snake_case)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
+mod __verus_spec_check_ID {
+    use super::*;
+    use::verus_spec_check::proptest::prelude::*;
+    use::verus_spec_check_vstd_ext::*;
+    use::verus_spec_check::{
+        VcheckBTreeMapExec,
+        VcheckBTreeSetExec
+    };
+    #[allow(clippy::declare_interior_mutable_const)]
+    const __VCHECK_FUZZ_FALSE_safe_double :::core::sync::atomic::AtomicBool =::core::sync::atomic::AtomicBool::new(false);
+    static __VCHECK_FUZZ_HITS_safe_double : [::core::sync::atomic::AtomicBool; 0usize] = [__VCHECK_FUZZ_FALSE_safe_double; 0usize];
+    #[allow(non_snake_case, dead_code)]
+    pub(super) fn __vcheck_fuzzmark_safe_double(__vcheck_i : usize) {
+        if let::core::option::Option::Some(__vcheck_b) = __VCHECK_FUZZ_HITS_safe_double.get(__vcheck_i) {
+            __vcheck_b.store(true,::core::sync::atomic::Ordering::Relaxed);
+        }
+    }
+    #[doc = "verus_spec_check::backend = bolero"]
+    #[doc = "verus_spec_check::bolero::mode = fuzz"]
+    #[doc = "__verus_spec_check_harness_marker__"]
+    #[allow(unused_variables, unused_mut, dead_code, non_snake_case)]
+    pub(super) fn __vcheck_fuzz_fn_safe_double(x : u16) -> u32 {
+        2 * x as u32
+    }
+    #[test]
+    #[allow(unexpected_cfgs)]
+    fn vcheck_safe_double() {
+        #[cfg(any(fuzzing_libfuzzer, fuzzing_afl, fuzzing_honggfuzz, fuzzing_random, kani))]
+        {
+            ::verus_spec_check::bolero::check!().with_generator(::verus_spec_check::vcheck_gen::<u16>()).cloned().for_each(| x | {
+                let r = super::safe_double(x);
+                ::core::assert!(::verus_spec_check::__vcheck_int::eq(r,::verus_spec_check::__vcheck_int::mul(2, x as u32)), "ensures clause failed");
+            });
+        }
+        #[cfg(not(any(fuzzing_libfuzzer, fuzzing_afl, fuzzing_honggfuzz, fuzzing_random, kani)))]
+        {
+            use::verus_spec_check::bolero_generator::ValueGenerator;
+            #[allow(clippy::declare_interior_mutable_const)]
+            const __VCHECK_FUZZ_FALSE :::core::sync::atomic::AtomicBool =::core::sync::atomic::AtomicBool::new(false);
+            static __VCHECK_FUZZ_GUIDE : [::core::sync::atomic::AtomicBool; 0usize] = [__VCHECK_FUZZ_FALSE; 0usize];
+            let __vcheck_gen =::verus_spec_check::vcheck_gen::<u16>();
+            let __vcheck_opts =::core::default::Default::default();
+            let mut __vcheck_exec = | __vcheck_bytes : &[u8] | ->::verus_spec_check::cov_fuzz::ContractExec {
+                let mut __vcheck_driver =::verus_spec_check::bolero_generator::driver::ByteSliceDriver::new(__vcheck_bytes, &__vcheck_opts,);
+                let::core::option::Option::Some(x) = ValueGenerator::generate(&__vcheck_gen, &mut __vcheck_driver) else {
+                    return::verus_spec_check::cov_fuzz::ContractExec::Invalid;
+                };
+                let r = __vcheck_fuzz_fn_safe_double(x);
+                let _ = &r;
+                if!(::verus_spec_check::__vcheck_int::eq(r,::verus_spec_check::__vcheck_int::mul(2, x as u32))) {
+                    return::verus_spec_check::cov_fuzz::ContractExec::Failed("ensures clause failed: `r == 2 * x as u32`");
+                }
+                ::verus_spec_check::cov_fuzz::ContractExec::Tested
+            };
+            match::verus_spec_check::cov_fuzz::guided_contract_loop(&[&__VCHECK_FUZZ_HITS_safe_double[..], &__VCHECK_FUZZ_GUIDE[..]], &mut __vcheck_exec,) {
+                ::verus_spec_check::cov_fuzz::ContractVerdict::Passed(__vcheck_stats) => {
+                    ::core::assert!(!(__vcheck_stats.tested == 0 &&__vcheck_stats.executions > 0), "verus_spec_check: vacuous fuzz harness: no sampled input ever \
+    reached the contract check ({} skipped by `requires`, {} undecodable). Narrow the \
+    input generator or weaken the precondition.", __vcheck_stats.skipped, __vcheck_stats.invalid);
+                }
+                ::verus_spec_check::cov_fuzz::ContractVerdict::Failed {
+                    genome : __vcheck_genome,
+                    failure : __vcheck_failure,
+                    stats : __vcheck_stats,
+                }
+                => {
+                    let mut __vcheck_driver =::verus_spec_check::bolero_generator::driver::ByteSliceDriver::new(&__vcheck_genome, &__vcheck_opts,);
+                    let __vcheck_decoded = ValueGenerator::generate(&__vcheck_gen, &mut __vcheck_driver);
+                    ::core::panic!("verus_spec_check: `mode = \"fuzz\"` found a contract violation \
+    in `{}`\n  failure: {}\n  input:   {:?}\n  after {} executions ({} tested); the run \
+    is deterministic — set VERUS_SPEC_CHECK_FUZZ_SEED to vary the search, \
+    VERUS_SPEC_CHECK_FUZZ_BUDGET to extend it", "safe_double", __vcheck_failure, __vcheck_decoded, __vcheck_stats.executions, __vcheck_stats.tested);
+                }
+            }
+        }
+    }
+}

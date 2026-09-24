@@ -1,0 +1,18 @@
+fn overwrite < T : Copy > (x : &mut T, v : T) ensures * x == v,
+{
+    *x = v;
+}
+::verus_spec_check::verus_spec_check_unverified!{
+    #[verifier::external_body]
+    #[inline(never)]
+    #[doc = "verus_spec_check::assume_spec_target = overwrite::<T>"]
+    #[doc = "verus_spec_check::assume_spec_type_params = T"]
+    #[doc = "__verus_spec_check_harness_marker__"]
+    exec fn __vcheck_mono_overwrite(x : &mut u32, v : u32) ensures * x == v,
+    {
+        #[allow(unused_unsafe)]
+        unsafe {
+            overwrite::<u32>(x, v)
+        }
+    }
+}

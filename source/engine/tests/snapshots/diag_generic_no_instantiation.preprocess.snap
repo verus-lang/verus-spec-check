@@ -1,0 +1,15 @@
+const _ : () = {
+    compile_error!("verus_spec_check: `__vcheck_assume_Vec_T_clear` is generic in <T> but no concrete instantiation was found.\n\nProperty-based testing needs concrete types to sample. Either:\n  - put `#[vcheck(T = u32)]` on this item to fix an instantiation explicitly, or\n  - attach a `#[vcheck]` to a (non-generic, or already-instantiated) function whose contract reaches `__vcheck_assume_Vec_T_clear`, and the instantiation will be inherited automatically.");
+};
+pub assume_specification < T > [Vec::clear](v : &mut Vec<T>) ensures v.deep_view().len() == 0;
+#[verifier::external_body]
+#[inline(never)]
+#[doc = "verus_spec_check::assume_spec_target = Vec::<T>::clear"]
+#[doc = "verus_spec_check::assume_spec_type_params = T"]
+#[doc = "__verus_spec_check_harness_marker__"]
+pub exec fn __vcheck_assume_Vec_T_clear < T > (v : &mut Vec<T>) ensures v.deep_view().len() == 0 {
+    #[allow(unused_unsafe)]
+    unsafe {
+        Vec::<T>::clear(v)
+    }
+}

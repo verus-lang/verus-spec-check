@@ -1,0 +1,23 @@
+[package]
+name = "verus_spec_check_external_provide"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "`external_vcheck_provide!` companion synthesis for the verus-spec-check engine. Internal crate: no stability guarantees."
+keywords = ["verus", "verified-rust", "verification", "proptest"]
+categories = ["development-tools"]
+
+[lib]
+name = "verus_spec_check_external_provide"
+path = "src/lib.rs"
+
+[dependencies]
+proc-macro2.workspace = true
+quote.workspace = true
+verus_syn.workspace = true
+verus_spec_check_exec_spec.workspace = true
+
+[lints]
+workspace = true

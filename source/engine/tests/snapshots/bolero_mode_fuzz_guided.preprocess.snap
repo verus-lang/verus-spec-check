@@ -1,0 +1,15 @@
+::verus_spec_check::verus_spec_check_unverified!{
+    #[doc = "verus_spec_check::backend = bolero"]
+    #[doc = "verus_spec_check::bolero::mode = fuzz"]
+    #[doc = "__verus_spec_check_harness_marker__"]
+    fn bounded_abs_diff(a : u8, b : u8) -> (r : u8) requires a <= 200,
+    ensures a >= b ==> r == a - b,
+    a < b ==> r == b - a,
+    {
+        if a >= b {
+            a - b
+        } else {
+            b - a
+        }
+    }
+}

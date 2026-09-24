@@ -1,0 +1,23 @@
+[package]
+name = "verus_spec_check_exec_spec"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Spec-to-exec lowering (`exec_spec_unverified!` / `exec_spec_verified!`) for the verus-spec-check engine."
+keywords = ["verus", "verified-rust", "verification", "proptest"]
+categories = ["development-tools"]
+
+[lib]
+name = "verus_spec_check_exec_spec"
+path = "src/lib.rs"
+
+[dependencies]
+proc-macro2.workspace = true
+quote.workspace = true
+verus_syn.workspace = true
+verus_spec_check_syntax.workspace = true
+
+[lints]
+workspace = true

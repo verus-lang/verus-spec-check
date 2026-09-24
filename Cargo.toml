@@ -1,0 +1,59 @@
+[workspace]
+members = [
+    "source/macros",
+    "source/engine",
+    "source/runtime",
+    "source/verus_spec_check",
+    "source/vstd_ext",
+    "source/syntax",
+    "source/assert",
+    "source/mutator",
+    "source/instrument",
+    "source/exec_spec",
+    "source/external_provide",
+    "source/attr",
+    "source/expand",
+    "source/vcheck_test",
+]
+# `builtin_macros_overlay/` is intentionally NOT a workspace member.
+# `covdriver/` is excluded because it links `rustc_private` internals and
+# only builds on the pinned nightly with the `rustc-dev` component — the
+# cov_fuzz orchestrator builds it on demand (see runtime/src/cov_fuzz_ext.rs).
+exclude = ["source/builtin_macros_overlay", "source/covdriver"]
+resolver = "2"
+
+[workspace.package]
+# Mirrors the Verus release line this tree is synced against (the vstd /
+# verus_builtin_macros pin). Maintained by tools/release/sync-verus.sh;
+# release.yml tags `verus-<date>` from this string.
+version = "0.0.0-2026-09-20-0158"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/verus-lang/verus-spec-check"
+authors = ["The Verus Contributors"]
+
+[workspace.lints]
+# Mostly empty (add lint groups as needed once the crate stabilizes); the
+# rust table below only registers well-known cfgs.
+
+[workspace.lints.rust]
+# The runtime carries a `cfg(kani)`-selected model of the spec-int lift
+# (see `source/runtime/src/spec_int_kani.rs`); `kani` is a well-known cfg
+# the Kani tool sets but unknown to rustc in a normal build.
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
+
+[workspace.dependencies]
+proc-macro2 = "1.0.39"
+quote = "1.0"
+# When verus updates its `verus_syn` pin, bump this ONE line (all engine-internal
+# crates inherit it). See .github/workflows/README.md for the sync workflow.
+verus_syn = { version = "=0.0.0-2026-09-06-0133", features = ["full", "visit", "visit-mut", "extra-traits"] }
+# Intra-workspace crates, declared once so member manifests stay terse.
+verus_spec_check_syntax = { path = "source/syntax" }
+verus_spec_check_assert = { path = "source/assert" }
+verus_spec_check_mutator = { path = "source/mutator" }
+verus_spec_check_instrument = { path = "source/instrument" }
+verus_spec_check_exec_spec = { path = "source/exec_spec" }
+verus_spec_check_external_provide = { path = "source/external_provide" }
+verus_spec_check_attr = { path = "source/attr" }
+verus_spec_check_expand = { path = "source/expand" }

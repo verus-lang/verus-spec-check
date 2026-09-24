@@ -1,0 +1,8 @@
+::verus_spec_check::verus_spec_check_unverified!{
+    #[doc = "__verus_spec_check_harness_marker__"]
+    fn bump(x : &mut u32) requires * old(x) < 1000,
+    ensures * x == *old(x) + 1,
+    {
+        *x = *x + 1;
+    }
+}

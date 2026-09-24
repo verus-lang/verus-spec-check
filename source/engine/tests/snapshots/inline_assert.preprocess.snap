@@ -1,0 +1,10 @@
+::verus_spec_check::verus_spec_check_unverified!{
+    #[doc = "verus_spec_check::skip_regular_harness"]
+    fn checked_add(a : u16, b : u16) -> (r : u32) ensures r == a as u32 + b as u32,
+    {
+        let r = a as u32 + b as u32;
+        #[vcheck]
+        assert(r >= a as u32);
+        r
+    }
+}

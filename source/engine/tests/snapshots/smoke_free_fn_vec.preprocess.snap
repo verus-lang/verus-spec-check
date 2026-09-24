@@ -1,0 +1,16 @@
+::verus_spec_check::verus_spec_check_unverified!{
+    spec fn small_enough(s : Seq<i64>) -> bool {
+        s.len() <= 16
+    }
+    spec fn appended(a : Seq<i64>, b : Seq<i64>, r : Seq<i64>) -> bool {
+        r.len() == a.len() + b.len()
+    }
+    #[doc = "__verus_spec_check_harness_marker__"]
+    fn append_vec(a : &[i64], b : &[i64]) -> (r : Vec<i64>) requires small_enough(a.deep_view()),
+    small_enough(b.deep_view()),
+    ensures appended(a.deep_view(), b.deep_view(), r.deep_view()),
+    {
+        let mut r : Vec<i64> = Vec::new();
+        r
+    }
+}

@@ -1,0 +1,349 @@
+::vstd::prelude::verus!{
+    #[allow(unused_imports)]
+    use::verus_spec_check_vstd_ext::*;
+    #[verifier::ext_equal]
+    pub enum Permission {
+        Read,
+        Write,
+        Admin,
+        Revoked,
+    }
+    #[derive(Eq, Hash, PartialEq, Debug)]
+    pub enum ExecPermission {
+        Read,
+        Write,
+        Admin,
+        Revoked,
+    }
+    impl::verus_spec_check_vstd_ext::ExecSpecType for Permission {
+        type ExecOwnedType = ExecPermission;
+        type ExecRefType<'a> = &'a ExecPermission;
+    }
+    impl < 'a >::verus_spec_check_vstd_ext::ToRef<&'a ExecPermission> for & 'a ExecPermission {
+        fn get_ref(self) -> &'a ExecPermission {
+            self
+        }
+    }
+    impl < 'a >::verus_spec_check_vstd_ext::ToOwned<ExecPermission> for & 'a ExecPermission {
+        fn get_owned(self) -> ExecPermission {
+            self.deep_clone()
+        }
+    }
+    impl DeepView for ExecPermission {
+        type V = Permission;
+        open spec fn deep_view(&self) -> Permission {
+            match self {
+                ExecPermission::Read => Permission::Read,
+                ExecPermission::Write => Permission::Write,
+                ExecPermission::Admin => Permission::Admin,
+                ExecPermission::Revoked => Permission::Revoked,
+            }
+        }
+    }
+    impl::verus_spec_check_vstd_ext::DeepViewClone for ExecPermission {
+        fn deep_clone(&self) -> Self {
+            match self {
+                ExecPermission::Read => ExecPermission::Read,
+                ExecPermission::Write => ExecPermission::Write,
+                ExecPermission::Admin => ExecPermission::Admin,
+                ExecPermission::Revoked => ExecPermission::Revoked,
+            }
+        }
+    }
+    #[allow(unreachable_patterns)]
+    impl < 'a >::verus_spec_check_vstd_ext::ExecSpecEq<'a> for & 'a ExecPermission {
+        type Other = &'a ExecPermission;
+        fn exec_eq(this : Self, other : Self::Other) -> bool {
+            match(this, other) {
+                (ExecPermission::Read {
+                    ..
+                }, ExecPermission::Read {
+                    ..
+                }) => true,
+                (ExecPermission::Write {
+                    ..
+                }, ExecPermission::Write {
+                    ..
+                }) => true,
+                (ExecPermission::Admin {
+                    ..
+                }, ExecPermission::Admin {
+                    ..
+                }) => true,
+                (ExecPermission::Revoked {
+                    ..
+                }, ExecPermission::Revoked {
+                    ..
+                }) => true,
+                (_, _) => false
+            }
+        }
+    }
+    impl ExecPermission {
+        #[allow(unreachable_patterns)]
+        #[allow(non_snake_case)]
+        pub fn exec_is_Read(&self) -> (res : bool) ensures res == matches!(self.deep_view(), Permission::Read {
+            ..
+        }) {
+            match self {
+                ExecPermission::Read => true,
+                _ => false,
+            }
+        }
+        #[allow(unreachable_patterns)]
+        #[allow(non_snake_case)]
+        pub fn exec_is_Write(&self) -> (res : bool) ensures res == matches!(self.deep_view(), Permission::Write {
+            ..
+        }) {
+            match self {
+                ExecPermission::Write => true,
+                _ => false,
+            }
+        }
+        #[allow(unreachable_patterns)]
+        #[allow(non_snake_case)]
+        pub fn exec_is_Admin(&self) -> (res : bool) ensures res == matches!(self.deep_view(), Permission::Admin {
+            ..
+        }) {
+            match self {
+                ExecPermission::Admin => true,
+                _ => false,
+            }
+        }
+        #[allow(unreachable_patterns)]
+        #[allow(non_snake_case)]
+        pub fn exec_is_Revoked(&self) -> (res : bool) ensures res == matches!(self.deep_view(), Permission::Revoked {
+            ..
+        }) {
+            match self {
+                ExecPermission::Revoked => true,
+                _ => false,
+            }
+        }
+    }
+    #[verifier::ext_equal]
+    pub struct User {
+        pub name_len : usize,
+        pub perm : Permission,
+        pub quota : u64,
+    }
+    #[derive(Eq, Hash, PartialEq, Debug)]
+    pub struct ExecUser {
+        pub name_len : < usize as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType,
+        pub perm : < Permission as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType,
+        pub quota : < u64 as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType,
+    }
+    impl::verus_spec_check_vstd_ext::ExecSpecType for User {
+        type ExecOwnedType = ExecUser;
+        type ExecRefType<'a> = &'a ExecUser;
+    }
+    impl < 'a >::verus_spec_check_vstd_ext::ToRef<&'a ExecUser> for & 'a ExecUser {
+        fn get_ref(self) -> &'a ExecUser {
+            self
+        }
+    }
+    impl < 'a >::verus_spec_check_vstd_ext::ToOwned<ExecUser> for & 'a ExecUser {
+        fn get_owned(self) -> ExecUser {
+            self.deep_clone()
+        }
+    }
+    impl DeepView for ExecUser {
+        type V = User;
+        open spec fn deep_view(&self) -> User {
+            User {
+                name_len : self.name_len.deep_view(),
+                perm : self.perm.deep_view(),
+                quota : self.quota.deep_view(),
+            }
+        }
+    }
+    impl::verus_spec_check_vstd_ext::DeepViewClone for ExecUser {
+        fn deep_clone(&self) -> Self {
+            ExecUser {
+                name_len : self.name_len.deep_clone(),
+                perm : self.perm.deep_clone(),
+                quota : self.quota.deep_clone(),
+            }
+        }
+    }
+    impl < 'a >::verus_spec_check_vstd_ext::ExecSpecEq<'a> for & 'a ExecUser {
+        type Other = &'a ExecUser;
+        fn exec_eq(this : Self, other : Self::Other) -> bool {
+            < < usize as::verus_spec_check_vstd_ext::ExecSpecType >::ExecRefType<'_> >::exec_eq(this.name_len.get_ref(), other.name_len.get_ref()) &&< < Permission as::verus_spec_check_vstd_ext::ExecSpecType >::ExecRefType<'_> >::exec_eq(this.perm.get_ref(), other.perm.get_ref()) &&< < u64 as::verus_spec_check_vstd_ext::ExecSpecType >::ExecRefType<'_> >::exec_eq(this.quota.get_ref(), other.quota.get_ref())
+        }
+    }
+    impl Permission {
+        pub open spec fn grants_write(&self) -> bool {
+            match self {
+                Permission::Write => true,
+                Permission::Admin => true,
+                _ => false,
+            }
+        }
+        pub open spec fn is_revoked(&self) -> bool {
+            match self {
+                Permission::Revoked => true,
+                _ => false,
+            }
+        }
+    }
+    impl ExecPermission {
+        #[allow(unused_parens)]
+        #[allow(non_shorthand_field_patterns)]
+        #[verifier::loop_isolation(false)]
+        #[verifier::external_body]
+        pub fn exec_grants_write(self : &ExecPermission,) -> (res : < bool as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType) requires true ensures res.deep_view() =~~= self.deep_view().grants_write() {
+            (match(self) {
+                ExecPermission::Write => {
+                    (true)
+                },
+                ExecPermission::Admin => {
+                    (true)
+                },
+                _ => {
+                    (false)
+                },
+            })
+        }
+        #[allow(unused_parens)]
+        #[allow(non_shorthand_field_patterns)]
+        #[verifier::loop_isolation(false)]
+        #[verifier::external_body]
+        pub fn exec_is_revoked(self : &ExecPermission,) -> (res : < bool as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType) requires true ensures res.deep_view() =~~= self.deep_view().is_revoked() {
+            (match(self) {
+                ExecPermission::Revoked => {
+                    (true)
+                },
+                _ => {
+                    (false)
+                },
+            })
+        }
+    }
+    impl User {
+        pub open spec fn is_valid_spec(&self) -> bool {
+            &&&self.name_len > 0 &&&!self.perm.is_revoked() &&&(self.perm.grants_write() ==> self.quota > 0)
+        }
+    }
+    impl ExecUser {
+        #[allow(unused_parens)]
+        #[allow(non_shorthand_field_patterns)]
+        #[verifier::loop_isolation(false)]
+        #[verifier::external_body]
+        pub fn exec_is_valid_spec(self : &ExecUser,) -> (res : < bool as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType) requires true ensures res.deep_view() =~~= self.deep_view().is_valid_spec() {
+            (((((&(self).name_len).get_ref()) > (0))) &&((!(((&(self).perm).get_ref()).exec_is_revoked().get_ref()))) &&(((!((((&(self).perm).get_ref()).exec_grants_write().get_ref())) || ((((&(self).quota).get_ref()) > (0)))))))
+        }
+    }
+}
+::vstd::prelude::verus!{
+    impl User {
+        #[verifier::external_body]
+        #[doc = "__verus_spec_check_harness_marker__"]
+        pub fn is_valid(&self) -> (b : bool) ensures b == self.is_valid_spec(),
+        {
+            true
+        }
+    }
+}
+#[cfg(test)]
+#[allow(non_snake_case)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
+mod __verus_spec_check_ID {
+    use super::*;
+    use::verus_spec_check::proptest::prelude::*;
+    use::verus_spec_check_vstd_ext::*;
+    use::verus_spec_check::{
+        VcheckBTreeMapExec,
+        VcheckBTreeSetExec
+    };
+    impl::std::clone::Clone for Permission {
+        fn clone(&self) -> Self {
+            match self {
+                Permission::Read => Permission::Read,
+                Permission::Write => Permission::Write,
+                Permission::Admin => Permission::Admin,
+                Permission::Revoked => Permission::Revoked
+            }
+        }
+    }
+    impl::std::fmt::Debug for Permission {
+        fn fmt(&self, f : &mut::std::fmt::Formatter<'_>) ->::std::fmt::Result {
+            ::std::fmt::Debug::fmt(&__vcheck_to_exec_Permission(self), f)
+        }
+    }
+    impl::verus_spec_check::VcheckStrategy for Permission {
+        type Strategy =::verus_spec_check::proptest::strategy::BoxedStrategy<Permission>;
+        fn vcheck_strategy() -> Self::Strategy {
+            use::verus_spec_check::proptest::strategy::Strategy;
+            ::verus_spec_check::proptest::prop_oneof![::verus_spec_check::proptest::strategy::Just(Permission::Read).boxed(),::verus_spec_check::proptest::strategy::Just(Permission::Write).boxed(),::verus_spec_check::proptest::strategy::Just(Permission::Admin).boxed(),::verus_spec_check::proptest::strategy::Just(Permission::Revoked).boxed()].boxed()
+        }
+    }
+    impl::verus_spec_check::ToExecModel for Permission {
+        type Exec = ExecPermission;
+        fn to_exec_model(&self) -> ExecPermission {
+            match self {
+                Permission::Read => ExecPermission::Read,
+                Permission::Write => ExecPermission::Write,
+                Permission::Admin => ExecPermission::Admin,
+                Permission::Revoked => ExecPermission::Revoked
+            }
+        }
+    }
+    impl::verus_spec_check::VcheckSpecCompanion for Permission {}
+    #[allow(non_snake_case)]
+    fn __vcheck_to_exec_Permission(self_value : &Permission) -> ExecPermission {
+        < Permission as::verus_spec_check::ToExecModel >::to_exec_model(self_value)
+    }
+    impl::std::clone::Clone for User {
+        fn clone(&self) -> Self {
+            User {
+                name_len : self.name_len.clone(),
+                perm : self.perm.clone(),
+                quota : self.quota.clone()
+            }
+        }
+    }
+    impl::std::fmt::Debug for User {
+        fn fmt(&self, f : &mut::std::fmt::Formatter<'_>) ->::std::fmt::Result {
+            ::std::fmt::Debug::fmt(&__vcheck_to_exec_User(self), f)
+        }
+    }
+    impl::verus_spec_check::VcheckStrategy for User {
+        type Strategy =::verus_spec_check::proptest::strategy::BoxedStrategy<User>;
+        fn vcheck_strategy() -> Self::Strategy {
+            use::verus_spec_check::proptest::strategy::Strategy;
+            (< usize as::verus_spec_check::VcheckStrategy >::vcheck_strategy(), < Permission as::verus_spec_check::VcheckStrategy >::vcheck_strategy(), < u64 as::verus_spec_check::VcheckStrategy >::vcheck_strategy()).prop_map(| (name_len, perm, quota) | User {
+                name_len,
+                perm,
+                quota
+            }).boxed()
+        }
+    }
+    impl::verus_spec_check::ToExecModel for User {
+        type Exec = ExecUser;
+        fn to_exec_model(&self) -> ExecUser {
+            let self_value = self;
+            ExecUser {
+                name_len : self_value.name_len,
+                perm : < Permission as::verus_spec_check::ToExecModel >::to_exec_model(&self_value.perm),
+                quota : self_value.quota
+            }
+        }
+    }
+    impl::verus_spec_check::VcheckSpecCompanion for User {}
+    #[allow(non_snake_case)]
+    fn __vcheck_to_exec_User(self_value : &User) -> ExecUser {
+        < User as::verus_spec_check::ToExecModel >::to_exec_model(self_value)
+    }
+    proptest!{
+        #![proptest_config(::verus_spec_check::proptest::test_runner::Config {
+            max_global_rejects : 1_000_000,
+            ..::verus_spec_check::proptest::test_runner::Config::default()
+        })] #[test]
+        fn vcheck_User_is_valid(self_value in::verus_spec_check::vcheck_strategy::<User>()) {
+            let b = super::User::is_valid(&self_value);
+            ::verus_spec_check::proptest::prop_assert!(b == < User as::verus_spec_check::ToExecModel >::to_exec_model(&self_value).exec_is_valid_spec(), "ensures clause failed");
+        }
+    }
+}

@@ -1,0 +1,63 @@
+::vstd::prelude::verus!{
+    #[allow(unused_imports)]
+    use::verus_spec_check_vstd_ext::*;
+    spec fn __vcheck_clause_make_zeros_0(__vcheck_ret_val : Seq<i64>) -> bool {
+        forall | i : usize | 0 <= i < __vcheck_ret_val.len() ==> __vcheck_ret_val[i as int] == 0
+    }
+    #[allow(unused_parens)]
+    #[allow(non_shorthand_field_patterns)]
+    #[verifier::loop_isolation(false)]
+    #[verifier::external_body]
+    fn exec___vcheck_clause_make_zeros_0(__vcheck_ret_val : &[< i64 as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType],) -> (res : < bool as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType) requires true ensures res.deep_view() =~~= __vcheck_clause_make_zeros_0(__vcheck_ret_val.deep_view()) {
+        ({
+            let mut _res = true;
+            {
+                let _lower_i = (0);
+                let _upper_i = ((__vcheck_ret_val).exec_len());
+                let mut i = _lower_i;
+                if _lower_i < _upper_i {
+                    while i < _upper_i {
+                        if!((::verus_spec_check_vstd_ext::ExecSpecEq::exec_eq(((__vcheck_ret_val).exec_index((((i).get_ref()))).get_ref()), (0)))) {
+                            _res = false;
+                            break;
+                        }
+                        i += 1;
+                    }
+                }
+            }
+            _res
+        })
+    }
+}
+::vstd::prelude::verus!{
+    #[doc = "__verus_spec_check_harness_marker__"]
+    fn make_zeros(n : u8) -> (r : Vec<i64>) ensures r.len() == n as usize,
+    forall | i : usize | 0 <= i < r.len() ==> r[i as int] == 0,
+    {
+        Vec::new()
+    }
+}
+#[cfg(test)]
+#[allow(non_snake_case)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
+mod __verus_spec_check_ID {
+    use super::*;
+    use::verus_spec_check::proptest::prelude::*;
+    use::verus_spec_check_vstd_ext::*;
+    use::verus_spec_check::{
+        VcheckBTreeMapExec,
+        VcheckBTreeSetExec
+    };
+    proptest!{
+        #![proptest_config(::verus_spec_check::proptest::test_runner::Config {
+            max_global_rejects : 1_000_000,
+            ..::verus_spec_check::proptest::test_runner::Config::default()
+        })] #[test]
+        fn vcheck_make_zeros(n in::verus_spec_check::vcheck_strategy::<u8>()) {
+            let r = super::make_zeros(n);
+            ::verus_spec_check::proptest::prop_assert!(r.len() == n as usize, "ensures clause failed");
+            ::verus_spec_check::proptest::prop_assert!(exec___vcheck_clause_make_zeros_0(r.as_slice()), "ensures clause failed");
+        }
+    }
+}

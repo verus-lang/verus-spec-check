@@ -1,0 +1,22 @@
+[package]
+name = "verus_spec_check_mutator"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Mutation-site enumeration for `#[vcheck_cov_mutate]` (verus-spec-check engine internals). Internal crate: no stability guarantees."
+keywords = ["verus", "verified-rust", "verification", "proptest"]
+categories = ["development-tools"]
+
+[lib]
+name = "verus_spec_check_mutator"
+path = "src/lib.rs"
+
+[dependencies]
+proc-macro2.workspace = true
+quote.workspace = true
+verus_syn.workspace = true
+
+[lints]
+workspace = true

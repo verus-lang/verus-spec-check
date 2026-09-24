@@ -1,0 +1,45 @@
+--- a/src/contrib/mod.rs
++++ b/src/contrib/mod.rs
+@@ -1,8 +1,18 @@
+ pub mod auto_spec;
+-pub mod exec_spec;
++pub mod hooks;
+ pub mod set_build;
+ pub mod spec_derive;
+ 
++// `exec_spec` was deleted from the overlay; the engine logic now lives in
++// the external `verus_spec_check_engine` crate. The proc-macro entry points
++// `exec_spec_unverified!` and `exec_spec_verified!` (defined in `lib.rs`)
++// delegate to `verus_spec_check_engine::expand_exec_spec`.
++//
++// Aside from that removed `pub mod exec_spec;` line, this file is identical
++// to upstream Verus: the vcheck whole-block folding pass is no longer hand-
++// patched into `contrib_preprocess_items`. It now flows through the upstream
++// `hooks` seam (see `hooks.rs`), driven by `contrib_hooks_provider.rs`.
++
+ use proc_macro2::TokenStream;
+ use verus_syn::{Attribute, ImplItem, Item, Meta, Path};
+ 
+@@ -117,6 +127,12 @@
+ }
+ 
+ pub(crate) fn contrib_preprocess_items(items: &mut Vec<Item>) {
++    // Opt-in, whole-list hooks run first: they may need sibling visibility
++    // across all items, and any items they add are then visited by the
++    // per-item pass below. With the `contrib-hooks` feature off (the
++    // default), this is a no-op.
++    hooks::preprocess_items(items);
++
+     let mut i = 0;
+     while i < items.len() {
+         let mut new_items: Vec<Item> = Vec::new();
+@@ -128,6 +144,9 @@
+ }
+ 
+ pub(crate) fn contrib_preprocess_impl_items(items: &mut Vec<ImplItem>) {
++    // Opt-in, whole-list hooks run first (no-op with `contrib-hooks` off).
++    hooks::preprocess_impl_items(items);
++
+     let mut i = 0;
+     while i < items.len() {
+         let mut new_items: Vec<ImplItem> = Vec::new();

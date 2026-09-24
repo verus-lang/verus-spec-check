@@ -1,0 +1,9 @@
+::verus_spec_check::verus_spec_check_unverified!{
+    #[doc = "verus_spec_check::backend = bolero"]
+    #[doc = "verus_spec_check::bolero::mode = fuzz"]
+    #[doc = "__verus_spec_check_harness_marker__"]
+    fn safe_double(x : u16) -> (r : u32) ensures r == 2 * x as u32,
+    {
+        2 * x as u32
+    }
+}

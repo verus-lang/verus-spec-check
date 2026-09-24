@@ -1,0 +1,14 @@
+pub assume_specification < T > [Vec::clear](v : &mut Vec<T>) ensures v.deep_view().len() == 0;
+::verus_spec_check::verus_spec_check_unverified!{
+    #[verifier::external_body]
+    #[inline(never)]
+    #[doc = "verus_spec_check::assume_spec_target = Vec::<T>::clear"]
+    #[doc = "verus_spec_check::assume_spec_type_params = T"]
+    #[doc = "__verus_spec_check_harness_marker__"]
+    pub exec fn __vcheck_assume_Vec_T_clear(v : &mut Vec<u32>) ensures v.deep_view().len() == 0 {
+        #[allow(unused_unsafe)]
+        unsafe {
+            Vec::<u32>::clear(v)
+        }
+    }
+}

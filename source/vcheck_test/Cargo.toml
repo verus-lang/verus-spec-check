@@ -1,0 +1,17 @@
+# This crate deliberately has NO dependency on the verus_spec_check stack: the
+# snippets are compiled in materialized scaffold crates (scaffold/
+# Cargo.toml.in) that mirror the examples/ template, all sharing one
+# CARGO_TARGET_DIR so the heavy deps (vstd, verus_syn) build once.
+[package]
+name = "verus_spec_check_test"
+publish = false
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lib]
+path = "src/lib.rs"
+test = false
+doctest = false

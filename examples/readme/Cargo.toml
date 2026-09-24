@@ -1,0 +1,24 @@
+[package]
+name = "verus_spec_check_user_demo"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+vstd = "=0.0.0-2026-09-20-0158"
+verus_spec_check = { path = "../../source/verus_spec_check" }
+verus_spec_check_vstd_ext = { path = "../../source/vstd_ext" }
+verus_builtin_macros = { version = "=0.0.0-2026-09-20-0158", features = ["contrib-hooks"] }
+
+[package.metadata.verus]
+verify = true
+
+[patch.crates-io]
+verus_builtin_macros = { path = "../../source/builtin_macros_overlay" }
+
+[workspace]
+
+[lints.rust]
+unused_features = "allow"

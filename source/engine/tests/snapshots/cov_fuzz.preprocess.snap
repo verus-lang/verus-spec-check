@@ -1,0 +1,13 @@
+::verus_spec_check::verus_spec_check_unverified!{
+    #[vcheck_cov_fuzz]
+    #[doc = "__verus_spec_check_harness_marker__"]
+    fn clamp_sum(a : u8, b : u8) -> (r : u16) requires a as u16 + b as u16 <= 400,
+    ensures r == a as u16 + b as u16,
+    {
+        if a > 10 &&b > 10 {
+            a as u16 + b as u16
+        } else {
+            a as u16 + b as u16
+        }
+    }
+}

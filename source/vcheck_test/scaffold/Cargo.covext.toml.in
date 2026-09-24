@@ -1,0 +1,32 @@
+# Scaffold manifest for external-coverage (`cov_fuzz` side-profile)
+# cases: the default scaffold plus a small LOCAL dependency crate
+# (`covext_dep`, materialized by tests/common/mod.rs next to the case)
+# that stands in for "code we do not control" — the target of an
+# `assume_specification`. Placeholders as in Cargo.toml.in.
+[package]
+name = "@NAME@"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+vstd = "=@PIN@"
+verus_spec_check = { path = "@ROOT@/source/verus_spec_check" }
+verus_spec_check_vstd_ext = { path = "@ROOT@/source/vstd_ext" }
+verus_builtin_macros = { version = "=@PIN@", features = ["contrib-hooks"] }
+# The external-coverage subject: a plain (non-Verus) dependency crate.
+covext_dep = { path = "./covext_dep" }
+
+[package.metadata.verus]
+verify = true
+
+[patch.crates-io]
+verus_builtin_macros = { path = "@ROOT@/source/builtin_macros_overlay" }
+
+[workspace]
+members = ["covext_dep"]
+
+[lints.rust]
+unused_features = "allow"

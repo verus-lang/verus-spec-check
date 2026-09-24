@@ -1,0 +1,49 @@
+::vstd::prelude::verus!{
+    #[allow(unused_imports)]
+    use::verus_spec_check_vstd_ext::*;
+}
+::vstd::prelude::verus!{
+    #[verifier::external_body]
+    #[doc = "__verus_spec_check_harness_marker__"]
+    pub fn is_input_sorted(s : &[i64]) -> (b : bool) ensures b == is_sorted(s.deep_view()),
+    {
+        true
+    }
+}
+#[cfg(test)]
+#[allow(non_snake_case)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
+mod __verus_spec_check_ID {
+    use super::*;
+    use::verus_spec_check::proptest::prelude::*;
+    use::verus_spec_check_vstd_ext::*;
+    use::verus_spec_check::{
+        VcheckBTreeMapExec,
+        VcheckBTreeSetExec
+    };
+    #[allow(dead_code)]
+    #[allow(unused_variables)]
+    fn exec_is_sorted(s : &[< i64 as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType]) -> < bool as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType {
+        {
+            let mut i = 0;
+            while i + 1 < s.len() {
+                if s[i] > s[i + 1] {
+                    return false;
+                }
+                i += 1;
+            }
+            true
+        }
+    }
+    proptest!{
+        #![proptest_config(::verus_spec_check::proptest::test_runner::Config {
+            max_global_rejects : 1_000_000,
+            ..::verus_spec_check::proptest::test_runner::Config::default()
+        })] #[test]
+        fn vcheck_is_input_sorted(::verus_spec_check::VcheckSeqSample(s) in::verus_spec_check::proptest::strategy::Strategy::prop_map(::verus_spec_check::vcheck_strategy::<::std::vec::Vec<i64>>(),::verus_spec_check::VcheckSeqSample,)) {
+            let b = super::is_input_sorted(s.as_slice());
+            ::verus_spec_check::proptest::prop_assert!(b == exec_is_sorted(s.as_slice()), "ensures clause failed");
+        }
+    }
+}

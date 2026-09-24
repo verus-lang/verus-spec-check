@@ -1,0 +1,39 @@
+::verus_spec_check::verus_spec_check_unverified!{
+    pub enum Permission {
+        Read,
+        Write,
+        Admin,
+        Revoked,
+    }
+    pub struct User {
+        pub name_len : usize,
+        pub perm : Permission,
+        pub quota : u64,
+    }
+    impl Permission {
+        pub open spec fn grants_write(&self) -> bool {
+            match self {
+                Permission::Write => true,
+                Permission::Admin => true,
+                _ => false,
+            }
+        }
+        pub open spec fn is_revoked(&self) -> bool {
+            match self {
+                Permission::Revoked => true,
+                _ => false,
+            }
+        }
+    }
+    impl User {
+        pub open spec fn is_valid_spec(&self) -> bool {
+            &&&self.name_len > 0 &&&!self.perm.is_revoked() &&&(self.perm.grants_write() ==> self.quota > 0)
+        }
+        #[verifier::external_body]
+        #[doc = "__verus_spec_check_harness_marker__"]
+        pub fn is_valid(&self) -> (b : bool) ensures b == self.is_valid_spec(),
+        {
+            true
+        }
+    }
+}

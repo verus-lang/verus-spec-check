@@ -1,0 +1,324 @@
+::vstd::prelude::verus!{
+    #[allow(unused_imports)]
+    use::verus_spec_check_vstd_ext::*;
+}
+::vstd::prelude::verus!{
+    #[doc = "__verus_spec_check_harness_marker__"]
+    fn strong_double(x : u32) -> (r : u32) requires x <= u32::MAX / 2,
+    ensures r == x * 2,
+    {
+        x + x
+    }
+}
+#[cfg(test)]
+#[allow(non_snake_case)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
+mod __verus_spec_check_ID {
+    use super::*;
+    use::verus_spec_check::proptest::prelude::*;
+    use::verus_spec_check_vstd_ext::*;
+    use::verus_spec_check::{
+        VcheckBTreeMapExec,
+        VcheckBTreeSetExec
+    };
+    proptest!{
+        #![proptest_config(::verus_spec_check::proptest::test_runner::Config {
+            max_global_rejects : 1_000_000,
+            ..::verus_spec_check::proptest::test_runner::Config::default()
+        })] #[test]
+        fn vcheck_strong_double(x in::verus_spec_check::vcheck_strategy::<u32>()) {
+            ::verus_spec_check::proptest::prop_assume!(::verus_spec_check::__vcheck_int::le(x,::verus_spec_check::__vcheck_int::div(u32::MAX, 2)), "requires clause rejected");
+            let r = super::strong_double(x);
+            ::verus_spec_check::proptest::prop_assert!(::verus_spec_check::__vcheck_int::eq(r,::verus_spec_check::__vcheck_int::mul(x, 2)), "ensures clause failed");
+        }
+    }
+    #[doc = "__verus_spec_check_harness_marker__"]
+    #[allow(unused_variables, unused_mut, dead_code, non_snake_case)]
+    pub(super) fn __vcheck_mutant_1_strong_double(x : u32) -> u32 {
+        x - x
+    }
+    #[doc = "__verus_spec_check_harness_marker__"]
+    #[allow(unused_variables, unused_mut, dead_code, non_snake_case)]
+    pub(super) fn __vcheck_mutant_2_strong_double(x : u32) -> u32 {
+        (x) + 1 + x
+    }
+    #[doc = "__verus_spec_check_harness_marker__"]
+    #[allow(unused_variables, unused_mut, dead_code, non_snake_case)]
+    pub(super) fn __vcheck_mutant_3_strong_double(x : u32) -> u32 {
+        (x) - 1 + x
+    }
+    #[doc = "__verus_spec_check_harness_marker__"]
+    #[allow(unused_variables, unused_mut, dead_code, non_snake_case)]
+    pub(super) fn __vcheck_mutant_4_strong_double(x : u32) -> u32 {
+        x + ((x) + 1)
+    }
+    #[doc = "__verus_spec_check_harness_marker__"]
+    #[allow(unused_variables, unused_mut, dead_code, non_snake_case)]
+    pub(super) fn __vcheck_mutant_5_strong_double(x : u32) -> u32 {
+        x + ((x) - 1)
+    }
+    #[allow(non_snake_case, unused_variables, unused_mut, dead_code)]
+    pub(super) fn __vcheck_mutant_run_1_strong_double() ->::verus_spec_check::cov_mutate::MutantOutcome {
+        use::verus_spec_check::cov_mutate::MutantOutcome;
+        use::verus_spec_check::proptest::test_runner::{
+            Config,
+            TestCaseError,
+            TestRunner
+        };
+        use::verus_spec_check::proptest::strategy::Strategy;
+        let cfg = Config {
+            cases : 64,
+            max_global_rejects : 65536,
+            failure_persistence : None,
+            ..Config::default()
+        };
+        let mut runner = TestRunner::new(cfg);
+        let strategy = ((::verus_spec_check::vcheck_strategy::<u32>()),);
+        let killed =::std::cell::Cell::new(false);
+        let assumed_at_least_once =::std::cell::Cell::new(false);
+        let run_result = runner.run(&strategy, | (mut x,) | {
+            if!{
+                ::verus_spec_check::__vcheck_int::le(x,::verus_spec_check::__vcheck_int::div(u32::MAX, 2))
+            }
+            {
+                return Err(TestCaseError::reject("pre-condition rejected",));
+            }
+            assumed_at_least_once.set(true);
+            let r = __vcheck_mutant_1_strong_double(x);
+            if!{
+                ::verus_spec_check::__vcheck_int::eq(r,::verus_spec_check::__vcheck_int::mul(x, 2))
+            }
+            {
+                killed.set(true);
+                return Err(TestCaseError::fail("ensures clause violated by mutant",));
+            }
+            Ok(())
+        });
+        if killed.get() || run_result.is_err() {
+            MutantOutcome::Killed
+        } else if ! assumed_at_least_once.get() {
+            MutantOutcome::Inconclusive
+        } else {
+            MutantOutcome::Survived
+        }
+    }
+    #[allow(non_snake_case, unused_variables, unused_mut, dead_code)]
+    pub(super) fn __vcheck_mutant_run_2_strong_double() ->::verus_spec_check::cov_mutate::MutantOutcome {
+        use::verus_spec_check::cov_mutate::MutantOutcome;
+        use::verus_spec_check::proptest::test_runner::{
+            Config,
+            TestCaseError,
+            TestRunner
+        };
+        use::verus_spec_check::proptest::strategy::Strategy;
+        let cfg = Config {
+            cases : 64,
+            max_global_rejects : 65536,
+            failure_persistence : None,
+            ..Config::default()
+        };
+        let mut runner = TestRunner::new(cfg);
+        let strategy = ((::verus_spec_check::vcheck_strategy::<u32>()),);
+        let killed =::std::cell::Cell::new(false);
+        let assumed_at_least_once =::std::cell::Cell::new(false);
+        let run_result = runner.run(&strategy, | (mut x,) | {
+            if!{
+                ::verus_spec_check::__vcheck_int::le(x,::verus_spec_check::__vcheck_int::div(u32::MAX, 2))
+            }
+            {
+                return Err(TestCaseError::reject("pre-condition rejected",));
+            }
+            assumed_at_least_once.set(true);
+            let r = __vcheck_mutant_2_strong_double(x);
+            if!{
+                ::verus_spec_check::__vcheck_int::eq(r,::verus_spec_check::__vcheck_int::mul(x, 2))
+            }
+            {
+                killed.set(true);
+                return Err(TestCaseError::fail("ensures clause violated by mutant",));
+            }
+            Ok(())
+        });
+        if killed.get() || run_result.is_err() {
+            MutantOutcome::Killed
+        } else if ! assumed_at_least_once.get() {
+            MutantOutcome::Inconclusive
+        } else {
+            MutantOutcome::Survived
+        }
+    }
+    #[allow(non_snake_case, unused_variables, unused_mut, dead_code)]
+    pub(super) fn __vcheck_mutant_run_3_strong_double() ->::verus_spec_check::cov_mutate::MutantOutcome {
+        use::verus_spec_check::cov_mutate::MutantOutcome;
+        use::verus_spec_check::proptest::test_runner::{
+            Config,
+            TestCaseError,
+            TestRunner
+        };
+        use::verus_spec_check::proptest::strategy::Strategy;
+        let cfg = Config {
+            cases : 64,
+            max_global_rejects : 65536,
+            failure_persistence : None,
+            ..Config::default()
+        };
+        let mut runner = TestRunner::new(cfg);
+        let strategy = ((::verus_spec_check::vcheck_strategy::<u32>()),);
+        let killed =::std::cell::Cell::new(false);
+        let assumed_at_least_once =::std::cell::Cell::new(false);
+        let run_result = runner.run(&strategy, | (mut x,) | {
+            if!{
+                ::verus_spec_check::__vcheck_int::le(x,::verus_spec_check::__vcheck_int::div(u32::MAX, 2))
+            }
+            {
+                return Err(TestCaseError::reject("pre-condition rejected",));
+            }
+            assumed_at_least_once.set(true);
+            let r = __vcheck_mutant_3_strong_double(x);
+            if!{
+                ::verus_spec_check::__vcheck_int::eq(r,::verus_spec_check::__vcheck_int::mul(x, 2))
+            }
+            {
+                killed.set(true);
+                return Err(TestCaseError::fail("ensures clause violated by mutant",));
+            }
+            Ok(())
+        });
+        if killed.get() || run_result.is_err() {
+            MutantOutcome::Killed
+        } else if ! assumed_at_least_once.get() {
+            MutantOutcome::Inconclusive
+        } else {
+            MutantOutcome::Survived
+        }
+    }
+    #[allow(non_snake_case, unused_variables, unused_mut, dead_code)]
+    pub(super) fn __vcheck_mutant_run_4_strong_double() ->::verus_spec_check::cov_mutate::MutantOutcome {
+        use::verus_spec_check::cov_mutate::MutantOutcome;
+        use::verus_spec_check::proptest::test_runner::{
+            Config,
+            TestCaseError,
+            TestRunner
+        };
+        use::verus_spec_check::proptest::strategy::Strategy;
+        let cfg = Config {
+            cases : 64,
+            max_global_rejects : 65536,
+            failure_persistence : None,
+            ..Config::default()
+        };
+        let mut runner = TestRunner::new(cfg);
+        let strategy = ((::verus_spec_check::vcheck_strategy::<u32>()),);
+        let killed =::std::cell::Cell::new(false);
+        let assumed_at_least_once =::std::cell::Cell::new(false);
+        let run_result = runner.run(&strategy, | (mut x,) | {
+            if!{
+                ::verus_spec_check::__vcheck_int::le(x,::verus_spec_check::__vcheck_int::div(u32::MAX, 2))
+            }
+            {
+                return Err(TestCaseError::reject("pre-condition rejected",));
+            }
+            assumed_at_least_once.set(true);
+            let r = __vcheck_mutant_4_strong_double(x);
+            if!{
+                ::verus_spec_check::__vcheck_int::eq(r,::verus_spec_check::__vcheck_int::mul(x, 2))
+            }
+            {
+                killed.set(true);
+                return Err(TestCaseError::fail("ensures clause violated by mutant",));
+            }
+            Ok(())
+        });
+        if killed.get() || run_result.is_err() {
+            MutantOutcome::Killed
+        } else if ! assumed_at_least_once.get() {
+            MutantOutcome::Inconclusive
+        } else {
+            MutantOutcome::Survived
+        }
+    }
+    #[allow(non_snake_case, unused_variables, unused_mut, dead_code)]
+    pub(super) fn __vcheck_mutant_run_5_strong_double() ->::verus_spec_check::cov_mutate::MutantOutcome {
+        use::verus_spec_check::cov_mutate::MutantOutcome;
+        use::verus_spec_check::proptest::test_runner::{
+            Config,
+            TestCaseError,
+            TestRunner
+        };
+        use::verus_spec_check::proptest::strategy::Strategy;
+        let cfg = Config {
+            cases : 64,
+            max_global_rejects : 65536,
+            failure_persistence : None,
+            ..Config::default()
+        };
+        let mut runner = TestRunner::new(cfg);
+        let strategy = ((::verus_spec_check::vcheck_strategy::<u32>()),);
+        let killed =::std::cell::Cell::new(false);
+        let assumed_at_least_once =::std::cell::Cell::new(false);
+        let run_result = runner.run(&strategy, | (mut x,) | {
+            if!{
+                ::verus_spec_check::__vcheck_int::le(x,::verus_spec_check::__vcheck_int::div(u32::MAX, 2))
+            }
+            {
+                return Err(TestCaseError::reject("pre-condition rejected",));
+            }
+            assumed_at_least_once.set(true);
+            let r = __vcheck_mutant_5_strong_double(x);
+            if!{
+                ::verus_spec_check::__vcheck_int::eq(r,::verus_spec_check::__vcheck_int::mul(x, 2))
+            }
+            {
+                killed.set(true);
+                return Err(TestCaseError::fail("ensures clause violated by mutant",));
+            }
+            Ok(())
+        });
+        if killed.get() || run_result.is_err() {
+            MutantOutcome::Killed
+        } else if ! assumed_at_least_once.get() {
+            MutantOutcome::Inconclusive
+        } else {
+            MutantOutcome::Survived
+        }
+    }
+    const __VCHECK_COV_MUTATE_TARGETS : [::verus_spec_check::cov_mutate::VcheckCovMutateTarget; 1usize] = [::verus_spec_check::cov_mutate::VcheckCovMutateTarget {
+        fn_name : "strong_double",
+        file : file!(),
+        mutants : &[::verus_spec_check::cov_mutate::VcheckCovMutant {
+            idx : 1u32 as u32,
+            line : 8u64 as u32,
+            description : "+ -> -",
+            run : __vcheck_mutant_run_1_strong_double,
+        },::verus_spec_check::cov_mutate::VcheckCovMutant {
+            idx : 2u32 as u32,
+            line : 8u64 as u32,
+            description : "x -> (x) + 1",
+            run : __vcheck_mutant_run_2_strong_double,
+        },::verus_spec_check::cov_mutate::VcheckCovMutant {
+            idx : 3u32 as u32,
+            line : 8u64 as u32,
+            description : "x -> (x) - 1",
+            run : __vcheck_mutant_run_3_strong_double,
+        },::verus_spec_check::cov_mutate::VcheckCovMutant {
+            idx : 4u32 as u32,
+            line : 8u64 as u32,
+            description : "x -> (x) + 1",
+            run : __vcheck_mutant_run_4_strong_double,
+        },::verus_spec_check::cov_mutate::VcheckCovMutant {
+            idx : 5u32 as u32,
+            line : 8u64 as u32,
+            description : "x -> (x) - 1",
+            run : __vcheck_mutant_run_5_strong_double,
+        }],
+        threshold :::std::option::Option::None,
+        skip : false,
+    }];
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    #[allow(non_snake_case)]
+    fn __vcheck_mutation_report() {
+        ::verus_spec_check::cov_mutate::run_mutation_report(env!("CARGO_MANIFEST_DIR"), &__VCHECK_COV_MUTATE_TARGETS,);
+    }
+}

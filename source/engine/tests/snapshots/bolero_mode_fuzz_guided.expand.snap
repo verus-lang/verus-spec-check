@@ -1,0 +1,142 @@
+::vstd::prelude::verus!{
+    #[allow(unused_imports)]
+    use::verus_spec_check_vstd_ext::*;
+}
+::vstd::prelude::verus!{
+    #[doc = "verus_spec_check::backend = bolero"]
+    #[doc = "verus_spec_check::bolero::mode = fuzz"]
+    #[doc = "__verus_spec_check_harness_marker__"]
+    fn bounded_abs_diff(a : u8, b : u8) -> (r : u8) requires a <= 200,
+    ensures a >= b ==> r == a - b,
+    a < b ==> r == b - a,
+    {
+        if a >= b {
+            a - b
+        } else {
+            b - a
+        }
+    }
+}
+#[cfg(test)]
+#[allow(non_snake_case)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
+mod __verus_spec_check_ID {
+    use super::*;
+    use::verus_spec_check::proptest::prelude::*;
+    use::verus_spec_check_vstd_ext::*;
+    use::verus_spec_check::{
+        VcheckBTreeMapExec,
+        VcheckBTreeSetExec
+    };
+    #[allow(clippy::declare_interior_mutable_const)]
+    const __VCHECK_FUZZ_FALSE_bounded_abs_diff :::core::sync::atomic::AtomicBool =::core::sync::atomic::AtomicBool::new(false);
+    static __VCHECK_FUZZ_HITS_bounded_abs_diff : [::core::sync::atomic::AtomicBool; 2usize] = [__VCHECK_FUZZ_FALSE_bounded_abs_diff; 2usize];
+    #[allow(non_snake_case, dead_code)]
+    pub(super) fn __vcheck_fuzzmark_bounded_abs_diff(__vcheck_i : usize) {
+        if let::core::option::Option::Some(__vcheck_b) = __VCHECK_FUZZ_HITS_bounded_abs_diff.get(__vcheck_i) {
+            __vcheck_b.store(true,::core::sync::atomic::Ordering::Relaxed);
+        }
+    }
+    #[doc = "verus_spec_check::backend = bolero"]
+    #[doc = "verus_spec_check::bolero::mode = fuzz"]
+    #[doc = "__verus_spec_check_harness_marker__"]
+    #[allow(unused_variables, unused_mut, dead_code, non_snake_case)]
+    pub(super) fn __vcheck_fuzz_fn_bounded_abs_diff(a : u8, b : u8) -> u8 {
+        if a >= b {
+            __vcheck_fuzzmark_bounded_abs_diff(0usize);
+            a - b
+        } else {
+            __vcheck_fuzzmark_bounded_abs_diff(1usize);
+            b - a
+        }
+    }
+    #[test]
+    #[allow(unexpected_cfgs)]
+    fn vcheck_bounded_abs_diff() {
+        #[cfg(any(fuzzing_libfuzzer, fuzzing_afl, fuzzing_honggfuzz, fuzzing_random, kani))]
+        {
+            #[cfg(not(kani))]
+            static __VCHECK_TESTED :::core::sync::atomic::AtomicU64 =::core::sync::atomic::AtomicU64::new(0);
+            #[cfg(not(kani))]
+            static __VCHECK_SKIPPED :::core::sync::atomic::AtomicU64 =::core::sync::atomic::AtomicU64::new(0);
+            ::verus_spec_check::bolero::check!().with_generator((::verus_spec_check::vcheck_gen::<u8>(),::verus_spec_check::vcheck_gen::<u8>())).cloned().for_each(| (a, b) | {
+                #[cfg(kani)]
+                ::kani::assume({
+                    a <= 200
+                });
+                #[cfg(not(kani))]
+                if!(a <= 200) {
+                    __VCHECK_SKIPPED.fetch_add(1,::core::sync::atomic::Ordering::Relaxed);
+                    return;
+                }
+                #[cfg(not(kani))]
+                __VCHECK_TESTED.fetch_add(1,::core::sync::atomic::Ordering::Relaxed);
+                let r = super::bounded_abs_diff(a, b);
+                ::core::assert!((!(a >= b) || (::verus_spec_check::__vcheck_int::eq(r,::verus_spec_check::__vcheck_int::sub(a, b)))), "ensures clause failed");
+                ::core::assert!((!(a < b) || (::verus_spec_check::__vcheck_int::eq(r,::verus_spec_check::__vcheck_int::sub(b, a)))), "ensures clause failed");
+            });
+            #[cfg(not(kani))]
+            {
+                let __vcheck_tested = __VCHECK_TESTED.load(::core::sync::atomic::Ordering::Relaxed);
+                let __vcheck_skipped = __VCHECK_SKIPPED.load(::core::sync::atomic::Ordering::Relaxed);
+                ::core::assert!(!(__vcheck_tested == 0 &&__vcheck_skipped > 0), "verus_spec_check: vacuous bolero harness: all {} sampled inputs were \
+            rejected by `requires` (or skipped as unspecified-`real` cases), so no contract check ever \
+            ran. Narrow the input generator or run this contract on the proptest backend \
+            (`mode = \"proptest\"`), whose reject tracking tolerates sparse preconditions.", __vcheck_skipped);
+            }
+        }
+        #[cfg(not(any(fuzzing_libfuzzer, fuzzing_afl, fuzzing_honggfuzz, fuzzing_random, kani)))]
+        {
+            use::verus_spec_check::bolero_generator::ValueGenerator;
+            #[allow(clippy::declare_interior_mutable_const)]
+            const __VCHECK_FUZZ_FALSE :::core::sync::atomic::AtomicBool =::core::sync::atomic::AtomicBool::new(false);
+            static __VCHECK_FUZZ_GUIDE : [::core::sync::atomic::AtomicBool; 1usize] = [__VCHECK_FUZZ_FALSE; 1usize];
+            let __vcheck_gen = (::verus_spec_check::vcheck_gen::<u8>(),::verus_spec_check::vcheck_gen::<u8>());
+            let __vcheck_opts =::core::default::Default::default();
+            let mut __vcheck_exec = | __vcheck_bytes : &[u8] | ->::verus_spec_check::cov_fuzz::ContractExec {
+                let mut __vcheck_driver =::verus_spec_check::bolero_generator::driver::ByteSliceDriver::new(__vcheck_bytes, &__vcheck_opts,);
+                let::core::option::Option::Some((a, b)) = ValueGenerator::generate(&__vcheck_gen, &mut __vcheck_driver) else {
+                    return::verus_spec_check::cov_fuzz::ContractExec::Invalid;
+                };
+                if {
+                    a <= 200
+                }
+                {
+                    __VCHECK_FUZZ_GUIDE[0usize].store(true,::core::sync::atomic::Ordering::Relaxed);
+                } else {
+                    return::verus_spec_check::cov_fuzz::ContractExec::Skipped;
+                }
+                let r = __vcheck_fuzz_fn_bounded_abs_diff(a, b);
+                let _ = &r;
+                if!((!(a >= b) || (::verus_spec_check::__vcheck_int::eq(r,::verus_spec_check::__vcheck_int::sub(a, b))))) {
+                    return::verus_spec_check::cov_fuzz::ContractExec::Failed("ensures clause failed: `a >= b ==> r == a - b`");
+                }
+                if!((!(a < b) || (::verus_spec_check::__vcheck_int::eq(r,::verus_spec_check::__vcheck_int::sub(b, a))))) {
+                    return::verus_spec_check::cov_fuzz::ContractExec::Failed("ensures clause failed: `a < b ==> r == b - a`");
+                }
+                ::verus_spec_check::cov_fuzz::ContractExec::Tested
+            };
+            match::verus_spec_check::cov_fuzz::guided_contract_loop(&[&__VCHECK_FUZZ_HITS_bounded_abs_diff[..], &__VCHECK_FUZZ_GUIDE[..]], &mut __vcheck_exec,) {
+                ::verus_spec_check::cov_fuzz::ContractVerdict::Passed(__vcheck_stats) => {
+                    ::core::assert!(!(__vcheck_stats.tested == 0 &&__vcheck_stats.executions > 0), "verus_spec_check: vacuous fuzz harness: no sampled input ever \
+    reached the contract check ({} skipped by `requires`, {} undecodable). Narrow the \
+    input generator or weaken the precondition.", __vcheck_stats.skipped, __vcheck_stats.invalid);
+                }
+                ::verus_spec_check::cov_fuzz::ContractVerdict::Failed {
+                    genome : __vcheck_genome,
+                    failure : __vcheck_failure,
+                    stats : __vcheck_stats,
+                }
+                => {
+                    let mut __vcheck_driver =::verus_spec_check::bolero_generator::driver::ByteSliceDriver::new(&__vcheck_genome, &__vcheck_opts,);
+                    let __vcheck_decoded = ValueGenerator::generate(&__vcheck_gen, &mut __vcheck_driver);
+                    ::core::panic!("verus_spec_check: `mode = \"fuzz\"` found a contract violation \
+    in `{}`\n  failure: {}\n  input:   {:?}\n  after {} executions ({} tested); the run \
+    is deterministic — set VERUS_SPEC_CHECK_FUZZ_SEED to vary the search, \
+    VERUS_SPEC_CHECK_FUZZ_BUDGET to extend it", "bounded_abs_diff", __vcheck_failure, __vcheck_decoded, __vcheck_stats.executions, __vcheck_stats.tested);
+                }
+            }
+        }
+    }
+}

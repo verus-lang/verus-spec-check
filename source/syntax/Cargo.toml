@@ -1,0 +1,21 @@
+[package]
+name = "verus_spec_check_syntax"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Forked Verus syntax helpers shared by the verus-spec-check engine crates (Vstd path resolver + vstd_kind build-mode detection). Internal crate: no stability guarantees."
+keywords = ["verus", "verified-rust", "verification", "proptest"]
+categories = ["development-tools"]
+
+[lib]
+name = "verus_spec_check_syntax"
+path = "src/lib.rs"
+
+[dependencies]
+proc-macro2.workspace = true
+quote.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,39 @@
+::vstd::prelude::verus!{
+    #[allow(unused_imports)]
+    use::verus_spec_check_vstd_ext::*;
+}
+::vstd::prelude::verus!{
+    #[doc = "__verus_spec_check_harness_marker__"]
+    fn bump(x : &mut u32) requires * old(x) < 1000,
+    ensures * x == *old(x) + 1,
+    {
+        *x = *x + 1;
+    }
+}
+#[cfg(test)]
+#[allow(non_snake_case)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
+mod __verus_spec_check_ID {
+    use super::*;
+    use::verus_spec_check::proptest::prelude::*;
+    use::verus_spec_check_vstd_ext::*;
+    use::verus_spec_check::{
+        VcheckBTreeMapExec,
+        VcheckBTreeSetExec
+    };
+    proptest!{
+        #![proptest_config(::verus_spec_check::proptest::test_runner::Config {
+            max_global_rejects : 1_000_000,
+            ..::verus_spec_check::proptest::test_runner::Config::default()
+        })] #[test]
+        fn vcheck_bump(mut x in::verus_spec_check::vcheck_strategy::<u32>()) {
+            let __vcheck_pre_x = x.clone();
+            ::verus_spec_check::proptest::prop_assume!(__vcheck_pre_x < 1000, "requires clause rejected");
+            super::bump(&mut x);
+            let __vcheck_result : () = ();
+            let _ = &__vcheck_result;
+            ::verus_spec_check::proptest::prop_assert!(::verus_spec_check::__vcheck_int::eq(x,::verus_spec_check::__vcheck_int::add(__vcheck_pre_x, 1)), "ensures clause failed");
+        }
+    }
+}

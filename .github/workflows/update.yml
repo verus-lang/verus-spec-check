@@ -1,0 +1,127 @@
+name: Update Verus
+
+# Verus publishes a new release roughly every Monday (~01:45 UTC). Run a few
+# hours later to pick it up. The Tuesday run catches delayed crate publishes;
+# a new Verus binary can still be adopted when vstd itself did not change.
+on:
+  schedule:
+    - cron: "0 12 * * 1"
+    - cron: "0 12 * * 2"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  # same as ci.yml; vstd and verus_syn debuginfo is huge
+  CARGO_PROFILE_DEV_DEBUG: 0
+  CARGO_PROFILE_TEST_DEBUG: 0
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # reclaim ~20GB of unused preinstalled tooling
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost "$AGENT_TOOLSDIRECTORY/CodeQL" \
+            /usr/local/share/powershell /usr/lib/jvm /opt/hostedtoolcache/go
+          sudo docker image prune --all --force >/dev/null 2>&1 || true
+          df -h /
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v16
+
+      # cargo for the overlay resync's `cargo fetch`. The Verus-specific
+      # toolchain is installed below, after the flake is bumped.
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # Exit code contract (see the script header): 0 = synced, 3 = both the
+      # latest Verus binary and selected vstd line are already pinned.
+      - name: Sync to latest Verus release
+        id: sync
+        run: |
+          set +e
+          bash tools/release/sync-verus.sh latest
+          code=$?
+          if [ "$code" -eq 3 ]; then
+            echo "No new Verus release or vstd line to sync; nothing to do."
+            exit 0
+          fi
+          exit "$code"
+
+      # Validate the bump against the *new* Verus in this same job. This is
+      # essential: a PR created by the default GITHUB_TOKEN does NOT trigger
+      # ci.yml, so if we didn't validate here the bump would go unverified.
+      - name: Build the newly-pinned Verus
+        if: steps.sync.outputs.synced == 'true'
+        run: nix build --print-build-logs
+
+      - name: Install Verus's Rust toolchain
+        if: steps.sync.outputs.synced == 'true'
+        run: |
+          out=$(nix build --no-link --print-out-paths)
+          # first token only; upstream appends "(overridden by ...)"
+          tc=$(grep -oE '"toolchain"[^"]*"[^"]*"' "$out/share/verus/version.json" \
+                 | sed -E 's/.*"toolchain"[^"]*"([^"]*)".*/\1/' \
+                 | awk '{print $1}')
+          [ -n "$tc" ] || { echo "::error::no toolchain in version.json"; exit 1; }
+          echo "Verus requires Rust toolchain: $tc"
+          rustup install "$tc"
+
+      # Match ci.yml's supported gate. The snippet suite replaced the full
+      # example sweep, which is both expensive and includes coverage examples
+      # with optional nightly/MIR tooling requirements.
+      - name: Validate against the new Verus
+        if: steps.sync.outputs.synced == 'true'
+        run: |
+          nix develop --command cargo build --workspace
+          nix develop --command cargo test -p verus_spec_check_engine
+          nix develop --command cargo test -p verus_spec_check_test -- --skip verify_
+          nix develop --command cargo test -p verus_spec_check_test verify_
+
+      - name: Open pull request
+        if: steps.sync.outputs.synced == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          # Use a PAT if provided so the PR also triggers ci.yml (PRs opened by
+          # the default GITHUB_TOKEN do not start other workflows). Falls back
+          # to GITHUB_TOKEN: the PR still opens, and this job already validated
+          # the bump above, so CI-on-PR is a convenience, not the gate.
+          token: ${{ secrets.RELEASE_PAT || secrets.GITHUB_TOKEN }}
+          # One branch per Verus binary date, independent of the vstd date.
+          branch: bot/verus-${{ steps.sync.outputs.verus_date }}
+          title: "chore: sync to Verus ${{ steps.sync.outputs.verus_version }}"
+          commit-message: |
+            chore: sync to Verus ${{ steps.sync.outputs.verus_version }}
+
+            Verus: ${{ steps.sync.outputs.previous_verus }} -> ${{ steps.sync.outputs.verus_version }}
+            vstd: ${{ steps.sync.outputs.previous_vstd }} -> ${{ steps.sync.outputs.vstd_version }}
+
+            Update dependency pins and the overlay only when the selected vstd
+            line changed.
+          body: |
+            Automated sync to Verus `${{ steps.sync.outputs.verus_version }}`.
+
+            - Verus binary: `${{ steps.sync.outputs.previous_verus }}` -> `${{ steps.sync.outputs.verus_version }}`
+            - vstd line: `${{ steps.sync.outputs.previous_vstd }}` -> `${{ steps.sync.outputs.vstd_version }}`
+
+            The Verus binary and vstd line are selected independently because a
+            Verus release does not always publish a new vstd version.
+
+            Generated by `tools/release/sync-verus.sh latest`. This bump was
+            already validated against the new Verus in the update job (build,
+            engine tests, and snippet-suite harness + verification tiers).
+            Merging to `main` triggers the release workflow, which tags
+            `verus-${{ steps.sync.outputs.verus_date }}`.
+
+            If CI is red after a vstd change, upstream likely drifted a file the
+            overlay patches. Fix `source/builtin_macros_overlay/src` on this
+            branch, run `tools/release/overlay-regen-patches.sh`, and push.
+          delete-branch: true

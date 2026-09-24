@@ -1,0 +1,21 @@
+[package]
+name = "verus_spec_check_macros"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Property-based testing macros for Verus (thin wrapper around verus-spec-check-engine)"
+keywords = ["verus", "verified-rust", "verification", "proptest"]
+categories = ["development-tools"]
+
+[lib]
+name = "verus_spec_check_macros"
+path = "src/lib.rs"
+proc-macro = true
+
+[dependencies]
+verus_spec_check_engine = { path = "../engine" }
+
+[lints]
+workspace = true

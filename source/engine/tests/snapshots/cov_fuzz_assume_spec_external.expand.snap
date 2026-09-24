@@ -1,0 +1,158 @@
+::vstd::prelude::verus!{
+    #[allow(unused_imports)]
+    use::verus_spec_check_vstd_ext::*;
+}
+::vstd::prelude::verus!{
+    #[verifier::external_body]
+    #[inline(never)]
+    #[doc = "verus_spec_check::assume_spec_target = u32::checked_add"]
+    #[doc = "__verus_spec_check_harness_marker__"]
+    pub exec fn __vcheck_assume_u32_checked_add(x : u32, y : u32) -> (r : Option<u32>) ensures r.is_some() ==> r.unwrap() == x + y,
+    r.is_none() ==> x + y > u32::MAX,
+    {
+        #[allow(unused_unsafe)]
+        unsafe {
+            u32::checked_add(x, y)
+        }
+    }
+}
+#[cfg(test)]
+#[allow(non_snake_case)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
+mod __verus_spec_check_ID {
+    use super::*;
+    use::verus_spec_check::proptest::prelude::*;
+    use::verus_spec_check_vstd_ext::*;
+    use::verus_spec_check::{
+        VcheckBTreeMapExec,
+        VcheckBTreeSetExec
+    };
+    proptest!{
+        #![proptest_config(::verus_spec_check::proptest::test_runner::Config {
+            max_global_rejects : 1_000_000,
+            ..::verus_spec_check::proptest::test_runner::Config::default()
+        })] #[test]
+        fn vcheck___vcheck_assume_u32_checked_add(x in::verus_spec_check::vcheck_strategy::<u32>(), y in::verus_spec_check::vcheck_strategy::<u32>()) {
+            let r = super::__vcheck_assume_u32_checked_add(x, y);
+            ::verus_spec_check::proptest::prop_assert!((!(r.is_some()) || (::verus_spec_check::__vcheck_int::eq(r.unwrap(),::verus_spec_check::__vcheck_int::add(x, y)))), "ensures clause failed");
+            ::verus_spec_check::proptest::prop_assert!((!(r.is_none()) || (::verus_spec_check::__vcheck_int::gt(::verus_spec_check::__vcheck_int::add(x, y), u32::MAX))), "ensures clause failed");
+        }
+    }
+    #[allow(clippy::declare_interior_mutable_const, dead_code)]
+    const __VCHECK_COVF_FALSE_INIT :::core::sync::atomic::AtomicBool =::core::sync::atomic::AtomicBool::new(false);
+    static __VCHECK_COVF_HITS_0___vcheck_assume_u32_checked_add : [::core::sync::atomic::AtomicBool; 0] = [];
+    static __VCHECK_COVF_COVERED_0___vcheck_assume_u32_checked_add : [::core::sync::atomic::AtomicBool; 0] = [];
+    static __VCHECK_COVF_INDETERMINATE_0___vcheck_assume_u32_checked_add : [::core::sync::atomic::AtomicBool; 0] = [];
+    #[allow(non_snake_case, dead_code)]
+    pub(super) fn __vcheck_covfuzz_run_0___vcheck_assume_u32_checked_add() ->::verus_spec_check::cov_fuzz::CovFuzzRunStats {
+        ::core::default::Default::default()
+    }
+    #[allow(non_snake_case, unused_variables, unused_mut, dead_code)]
+    pub(super) fn __vcheck_covext_record_0___vcheck_assume_u32_checked_add() ->::verus_spec_check::cov_fuzz::CovExtRecording {
+        use::verus_spec_check::bolero_generator::ValueGenerator;
+        #[allow(clippy::declare_interior_mutable_const)]
+        const __VCHECK_COVEXT_FALSE :::core::sync::atomic::AtomicBool =::core::sync::atomic::AtomicBool::new(false);
+        static __VCHECK_COVEXT_GUIDE : [::core::sync::atomic::AtomicBool; 0usize] = [__VCHECK_COVEXT_FALSE; 0usize];
+        static __VCHECK_COVEXT_ENGAGE : [::core::sync::atomic::AtomicBool; 2usize] = [__VCHECK_COVEXT_FALSE; 2usize];
+        for __vcheck_bit in __VCHECK_COVEXT_GUIDE.iter().chain(__VCHECK_COVEXT_ENGAGE.iter()) {
+            __vcheck_bit.store(false,::core::sync::atomic::Ordering::Relaxed);
+        }
+        let __vcheck_gen = (::verus_spec_check::vcheck_gen::<u32>(),::verus_spec_check::vcheck_gen::<u32>());
+        let __vcheck_opts =::core::default::Default::default();
+        let mut __vcheck_probe_checks = [0u64; 0usize];
+        let mut __vcheck_probe_violations = [0u64; 0usize];
+        let mut __vcheck_recording =::verus_spec_check::cov_fuzz::covext_record_loop(&[&__VCHECK_COVEXT_GUIDE[..], &__VCHECK_COVEXT_ENGAGE[..]], 2usize, &mut | __vcheck_bytes : &[u8] | {
+            let mut __vcheck_driver =::verus_spec_check::bolero_generator::driver::ByteSliceDriver::new(__vcheck_bytes, &__vcheck_opts,);
+            let::core::option::Option::Some((x, y)) = ValueGenerator::generate(&__vcheck_gen, &mut __vcheck_driver) else {
+                return::verus_spec_check::cov_fuzz::RecordOutcome::Invalid;
+            };
+            let r = super::__vcheck_assume_u32_checked_add(x, y);
+            let mut __vcheck_clauses =::verus_spec_check::cov_fuzz::ClauseMask::new(2usize);
+            if {
+                r.is_some()
+            }
+            {
+                __VCHECK_COVEXT_ENGAGE[0usize].store(true,::core::sync::atomic::Ordering::Relaxed);
+                __vcheck_clauses.set(0usize);
+            }
+            if {
+                r.is_none()
+            }
+            {
+                __VCHECK_COVEXT_ENGAGE[1usize].store(true,::core::sync::atomic::Ordering::Relaxed);
+                __vcheck_clauses.set(1usize);
+            }
+            let _ = &r;
+            ::verus_spec_check::cov_fuzz::RecordOutcome::Tested {
+                clauses : __vcheck_clauses,
+            }
+        },);
+        __vcheck_recording.unlowerable_clauses =::std::vec![];
+        __vcheck_recording.probes =::std::vec![];
+        __vcheck_recording
+    }
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    #[allow(non_snake_case, unused_variables, unused_mut)]
+    fn __vcheck_covext_replay_0___vcheck_assume_u32_checked_add() {
+        use::verus_spec_check::bolero_generator::ValueGenerator;
+        const __VCHECK_RESCUE_SELECTED : bool = match::core::option_env!("VERUS_SPEC_CHECK_COVEXT_RESCUE_SELECTORS") {
+            ::core::option::Option::None => true,
+            ::core::option::Option::Some(list) =>::verus_spec_check::cov_fuzz::covext_rescue_selector_enabled(list, "0268cc447b90180f",),
+        };
+        if ! __VCHECK_RESCUE_SELECTED {
+            return;
+        }
+        let __vcheck_genomes = match::verus_spec_check::cov_fuzz::covext_replay_genomes(concat!(module_path!(), "::cov_fuzz:", stringify!(0usize))) {
+            ::core::result::Result::Ok(::core::option::Option::Some(genomes)) => genomes,
+            ::core::result::Result::Ok(::core::option::Option::None) => return,
+            ::core::result::Result::Err(error) => panic!("{error}"),
+        };
+        let __vcheck_gen = (::verus_spec_check::vcheck_gen::<u32>(),::verus_spec_check::vcheck_gen::<u32>());
+        let __vcheck_opts =::core::default::Default::default();
+        for __vcheck_g in __vcheck_genomes {
+            let mut __vcheck_driver =::verus_spec_check::bolero_generator::driver::ByteSliceDriver::new(&__vcheck_g, &__vcheck_opts,);
+            let::core::option::Option::Some((x, y)) = ValueGenerator::generate(&__vcheck_gen, &mut __vcheck_driver) else {
+                panic!("cov_fuzz replay drift: recorded genome no longer decodes");
+            };
+            let r = super::__vcheck_assume_u32_checked_add(x, y);
+            let _ = &r;
+        }
+        ::verus_spec_check::cov_fuzz::covext_mark_replay_complete(concat!(module_path!(), "::cov_fuzz:", stringify!(0usize))).unwrap_or_else(| error | panic!("{error}"));
+    }
+    static __VCHECK_COV_FUZZ_TARGETS : [::verus_spec_check::cov_fuzz::VcheckCovFuzzTarget; 1usize] = [::verus_spec_check::cov_fuzz::VcheckCovFuzzTarget {
+        target_id : concat!(module_path!(), "::cov_fuzz:", stringify!(0usize)),
+        fn_name : "__vcheck_assume_u32_checked_add",
+        file : file!(),
+        branch_cap_hit : false,
+        branches : &[],
+        hits : &__VCHECK_COVF_HITS_0___vcheck_assume_u32_checked_add,
+        covered : &__VCHECK_COVF_COVERED_0___vcheck_assume_u32_checked_add,
+        indeterminate : &__VCHECK_COVF_INDETERMINATE_0___vcheck_assume_u32_checked_add,
+        unlowerable_ensures : &[],
+        run : __vcheck_covfuzz_run_0___vcheck_assume_u32_checked_add,
+        threshold :::std::option::Option::None,
+        skip : false,
+        external :::std::option::Option::Some(::verus_spec_check::cov_fuzz::VcheckCovFuzzExternal {
+            target_path : "u32::checked_add",
+            generic_type_params : &[],
+            compile_selector : "0268cc447b90180f",
+            replay_test : concat!(module_path!(), "::", stringify!(__vcheck_covext_replay_0___vcheck_assume_u32_checked_add)),
+            recorder : __vcheck_covext_record_0___vcheck_assume_u32_checked_add,
+        }),
+    }];
+    #[::verus_spec_check::cov_fuzz::linkme::distributed_slice(::verus_spec_check::cov_fuzz::VCHECK_COV_FUZZ_REGISTRY)]
+    #[linkme(crate =::verus_spec_check::cov_fuzz::linkme)]
+    #[allow(non_upper_case_globals)]
+    static __VCHECK_COV_FUZZ_REGISTRY_ENTRY :::verus_spec_check::cov_fuzz::VcheckCovFuzzRegistryEntry =::verus_spec_check::cov_fuzz::VcheckCovFuzzRegistryEntry {
+        crate_dir : env!("CARGO_MANIFEST_DIR"),
+        targets : &__VCHECK_COV_FUZZ_TARGETS,
+    };
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    #[allow(non_snake_case)]
+    fn __vcheck_cov_fuzz_report() {
+        ::verus_spec_check::cov_fuzz::run_cov_fuzz_report(env!("CARGO_MANIFEST_DIR"), &__VCHECK_COV_FUZZ_TARGETS,);
+    }
+}

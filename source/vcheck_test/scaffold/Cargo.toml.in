@@ -1,0 +1,37 @@
+# Scaffold manifest for one materialized snippet crate. Mirrors the
+# examples/ Cargo.toml template (see examples/README.md). Placeholders
+# are substituted by tests/common/mod.rs at test time:
+#   @NAME@ -- per-test crate name
+#   @ROOT@ -- absolute path of the repo root
+#   @PIN@  -- the vstd / verus_builtin_macros version pin, read from
+#             source/vstd_ext/Cargo.toml so tools/release/sync-verus.sh
+#             keeps working without knowing about this file.
+[package]
+name = "@NAME@"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+vstd = "=@PIN@"
+verus_spec_check = { path = "@ROOT@/source/verus_spec_check" }
+verus_spec_check_vstd_ext = { path = "@ROOT@/source/vstd_ext" }
+# REQUIRED for `#[vcheck]` folding: the overlay's contrib-hooks feature is
+# off by default (matching stock Verus). Without this direct dep,
+# `#[vcheck]` resolves to a no-op attribute macro and zero harnesses are
+# generated (the Pass { harnesses: n } assertion catches that).
+verus_builtin_macros = { version = "=@PIN@", features = ["contrib-hooks"] }
+
+[package.metadata.verus]
+verify = true
+
+# Substitutes our overlay for stock verus_builtin_macros.
+[patch.crates-io]
+verus_builtin_macros = { path = "@ROOT@/source/builtin_macros_overlay" }
+
+[workspace]
+
+[lints.rust]
+unused_features = "allow"

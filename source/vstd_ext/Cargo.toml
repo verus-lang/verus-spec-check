@@ -1,0 +1,33 @@
+[package]
+name = "verus_spec_check_vstd_ext"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "vstd-side exec_spec runtime types that the verus_spec_check engine emits paths into. Re-housed from `vstd::contrib::exec_spec::*` so that consumers of verus_spec_check do not need a forked vstd."
+keywords = ["verus", "verified-rust", "verification", "proptest"]
+categories = ["development-tools"]
+
+[lib]
+name = "verus_spec_check_vstd_ext"
+path = "src/lib.rs"
+
+
+
+[dependencies]
+# Pulled from crates.io (registry) only
+vstd = "=0.0.0-2026-09-20-0158"
+verus_builtin_macros = "=0.0.0-2026-09-20-0158"
+verus_builtin = "=0.0.0-2026-09-16-0054"
+
+[features]
+default = ["std"]
+std = ["alloc"]
+alloc = []
+
+[package.metadata.verus]
+verify = true
+
+[lints.rust]
+unused_imports = "allow"

@@ -1,0 +1,44 @@
+::vstd::prelude::verus!{
+    #[allow(unused_imports)]
+    use::verus_spec_check_vstd_ext::*;
+}
+::vstd::prelude::verus!{
+    #[verifier::external_body]
+    #[inline(never)]
+    #[doc = "verus_spec_check::assume_spec_target = overwrite::<T>"]
+    #[doc = "verus_spec_check::assume_spec_type_params = T"]
+    #[doc = "__verus_spec_check_harness_marker__"]
+    exec fn __vcheck_mono_overwrite(x : &mut u32, v : u32) ensures * x == v,
+    {
+        #[allow(unused_unsafe)]
+        unsafe {
+            overwrite::<u32>(x, v)
+        }
+    }
+}
+#[cfg(test)]
+#[allow(non_snake_case)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
+mod __verus_spec_check_ID {
+    use super::*;
+    use::verus_spec_check::proptest::prelude::*;
+    use::verus_spec_check_vstd_ext::*;
+    use::verus_spec_check::{
+        VcheckBTreeMapExec,
+        VcheckBTreeSetExec
+    };
+    proptest!{
+        #![proptest_config(::verus_spec_check::proptest::test_runner::Config {
+            max_global_rejects : 1_000_000,
+            ..::verus_spec_check::proptest::test_runner::Config::default()
+        })] #[test]
+        fn vcheck___vcheck_mono_overwrite(mut x in::verus_spec_check::vcheck_strategy::<u32>(), v in::verus_spec_check::vcheck_strategy::<u32>()) {
+            let __vcheck_pre_x = x.clone();
+            super::__vcheck_mono_overwrite(&mut x, v);
+            let __vcheck_result : () = ();
+            let _ = &__vcheck_result;
+            ::verus_spec_check::proptest::prop_assert!(x == v, "ensures clause failed");
+        }
+    }
+}

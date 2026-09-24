@@ -1,0 +1,59 @@
+::vstd::prelude::verus!{
+    #[allow(unused_imports)]
+    use::verus_spec_check_vstd_ext::*;
+    spec fn small_enough(s : Seq<i64>) -> bool {
+        s.len() <= 16
+    }
+    #[allow(unused_parens)]
+    #[allow(non_shorthand_field_patterns)]
+    #[verifier::loop_isolation(false)]
+    #[verifier::external_body]
+    fn exec_small_enough(s : &[< i64 as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType],) -> (res : < bool as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType) requires true ensures res.deep_view() =~~= small_enough(s.deep_view()) {
+        (((s).exec_len()) <= (16))
+    }
+    spec fn appended(a : Seq<i64>, b : Seq<i64>, r : Seq<i64>) -> bool {
+        r.len() == a.len() + b.len()
+    }
+    #[allow(unused_parens)]
+    #[allow(non_shorthand_field_patterns)]
+    #[verifier::loop_isolation(false)]
+    #[verifier::external_body]
+    fn exec_appended(a : &[< i64 as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType], b : &[< i64 as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType], r : &[< i64 as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType],) -> (res : < bool as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType) requires true ensures res.deep_view() =~~= appended(a.deep_view(), b.deep_view(), r.deep_view()) {
+        (::verus_spec_check_vstd_ext::ExecSpecEq::exec_eq(((r).exec_len()), (((a).exec_len()) + ((b).exec_len()))))
+    }
+}
+::vstd::prelude::verus!{
+    #[doc = "__verus_spec_check_harness_marker__"]
+    fn append_vec(a : &[i64], b : &[i64]) -> (r : Vec<i64>) requires small_enough(a.deep_view()),
+    small_enough(b.deep_view()),
+    ensures appended(a.deep_view(), b.deep_view(), r.deep_view()),
+    {
+        let mut r : Vec<i64> = Vec::new();
+        r
+    }
+}
+#[cfg(test)]
+#[allow(non_snake_case)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
+mod __verus_spec_check_ID {
+    use super::*;
+    use::verus_spec_check::proptest::prelude::*;
+    use::verus_spec_check_vstd_ext::*;
+    use::verus_spec_check::{
+        VcheckBTreeMapExec,
+        VcheckBTreeSetExec
+    };
+    proptest!{
+        #![proptest_config(::verus_spec_check::proptest::test_runner::Config {
+            max_global_rejects : 1_000_000,
+            ..::verus_spec_check::proptest::test_runner::Config::default()
+        })] #[test]
+        fn vcheck_append_vec(::verus_spec_check::VcheckSeqSample(a) in::verus_spec_check::proptest::strategy::Strategy::prop_map(::verus_spec_check::vcheck_strategy::<::std::vec::Vec<i64>>(),::verus_spec_check::VcheckSeqSample,),::verus_spec_check::VcheckSeqSample(b) in::verus_spec_check::proptest::strategy::Strategy::prop_map(::verus_spec_check::vcheck_strategy::<::std::vec::Vec<i64>>(),::verus_spec_check::VcheckSeqSample,)) {
+            ::verus_spec_check::proptest::prop_assume!(exec_small_enough(a.as_slice()), "requires clause rejected");
+            ::verus_spec_check::proptest::prop_assume!(exec_small_enough(b.as_slice()), "requires clause rejected");
+            let r = super::append_vec(a.as_slice(), b.as_slice());
+            ::verus_spec_check::proptest::prop_assert!(exec_appended(a.as_slice(), b.as_slice(), r.as_slice()), "ensures clause failed");
+        }
+    }
+}
