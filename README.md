@@ -67,7 +67,7 @@ See `USAGE.md` for more information.
 
 ### Coverage reports
 
-Two attributes turn `cargo test` into a spec-quality report, from
+Two attributes turn `cargo test` into a spec-completeness report, from
 opposite directions:
 
 - `#[vcheck_cov_mutate]` -- mutation coverage: is the spec strong enough
