@@ -1,7 +1,7 @@
 # verus-spec-check
-`verus-spec-check` is a tool that generates and evaluates automated tests from [Verus](https://github.com/verus-lang/verus) specifications. `verus-spec-check` is designed to integrate smoothly with existing cargo-based Verus codebases, and supports the automated testing of arbitrary Verus contracts. `verus-spec-check` integrates with stock Verus, and only the patching of the `verus!` macro is required.
+`verus-spec-check` is a tool that generates and evaluates automated tests from [Verus](https://github.com/verus-lang/verus) specifications. `verus-spec-check` integrates smoothly with existing cargo-based Verus codebases and works directly with stock Verus through patching the `verus!` macro.
 
-Using [proptest](https://github.com/proptest-rs/proptest) and [Bolero](https://github.com/camshaft/bolero) as backends, `verus-spec-check` supports the property-based testing, fuzzing, model checking, and mutation testing of Verus contracts. Concrete use cases for `verus-spec-check` include automatically testing the soundness of assumed specifications and axioms, automatically testing the completeness of the specifications on top-level functions, generating concrete counterexamples for failing verification conditions, and empirically validating verification conditions before embarking on proving them.
+Using [proptest](https://github.com/proptest-rs/proptest) and [Bolero](https://github.com/camshaft/bolero) as backends, `verus-spec-check` supports the property-based testing, fuzzing, model checking, and mutation testing of Verus specifications. Concrete use cases for `verus-spec-check` include automatically testing the soundness of assumed specifications and axioms, automatically testing the completeness of the specifications on top-level functions, generating concrete counterexamples for failing verification conditions, and empirically validating verification conditions before embarking on proving them.
 
 ## Status
 Like Verus, `verus-spec-check` is under active development. Features may be broken and/or missing, and documentation is still incomplete.
@@ -44,7 +44,7 @@ assume_specification [ u32::checked_add ](x: u32, y: u32) -> (r: Option<u32>)
 Run with:
 
 ```bash
-cargo test
+cargo test         # run tests (default: proptest) 
 cargo verus verify # verus verification is not affected
 ```
 
