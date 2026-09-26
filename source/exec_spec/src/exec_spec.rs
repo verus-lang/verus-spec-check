@@ -1565,16 +1565,27 @@ fn compile_match_arm(ctx: &LocalCtx, arm: &Arm, unverified: bool) -> Result<Toke
     let pat = compile_pattern(&mut ctx, &arm.pat, &mut new_locals)?;
 
     // New locals needs to be converted into the canonical borrowed types (e.g. from &String => &str)
-    let local_converts = new_locals.iter().map(|ident| {
-        quote! {
-            let #ident = #ident.get_ref();
+    let local_converts = new_locals
+        .iter()
+        .map(|ident| {
+            quote! {
+                let #ident = #ident.get_ref();
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let guard = match &arm.guard {
+        Some((_, guard)) => {
+            let guard = compile_expr(&ctx, guard, VarMode::Owned, unverified)?;
+            quote! { if { #(#local_converts)* #guard } }
         }
-    });
+        None => quote! {},
+    };
 
     let body = compile_expr(&ctx, &arm.body, VarMode::Owned, unverified)?;
 
     Ok(quote! {
-        #pat => {
+        #pat #guard => {
             #(#local_converts)*
             #body
         }
