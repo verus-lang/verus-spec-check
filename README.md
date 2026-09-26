@@ -1,5 +1,5 @@
 # verus-spec-check
-`verus-spec-check` is a tool that generates and evaluates automated tests from [Verus](https://github.com/verus-lang/verus) specifications. `verus-spec-check` integrates smoothly with existing cargo-based Verus codebases and works directly with stock Verus through patching the `verus!` macro.
+`verus-spec-check` is a tool for automatically testing [Verus](https://github.com/verus-lang/verus) specifications. `verus-spec-check` integrates smoothly with existing cargo-based Verus codebases and works directly with stock Verus through patching the `verus!` macro.
 
 Using [proptest](https://github.com/proptest-rs/proptest) and [Bolero](https://github.com/camshaft/bolero) as backends, `verus-spec-check` supports the property-based testing, fuzzing, model checking, and mutation testing of Verus specifications. Concrete use cases for `verus-spec-check` include automatically testing the soundness of assumed specifications and axioms, automatically testing the completeness of the specifications on top-level functions, generating concrete counterexamples for failing verification conditions, and empirically validating verification conditions before embarking on proving them.
 
