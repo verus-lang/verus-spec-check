@@ -89,6 +89,106 @@ pub enum ParamShape {
         elem: ParamElem,
         val_elem: Option<ParamElem>,
     },
+    /// A std value type sampled whole, see [`StdValueKind`].
+    StdValue {
+        ty: Type,
+        kind: StdValueKind,
+        by_ref: bool,
+    },
+}
+
+/// Std value types with a runtime `VcheckStrategy` and `VcheckGen`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StdValueKind {
+    Range,
+    RangeInclusive,
+    RangeFrom,
+    RangeTo,
+    RangeToInclusive,
+    RangeFull,
+    Ordering,
+    NonZero,
+}
+
+impl StdValueKind {
+    /// Runtime form of `<value>@`.
+    pub fn view_form(&self, value: &Ident) -> TokenStream2 {
+        match self {
+            StdValueKind::NonZero => quote! { #value.get() },
+            StdValueKind::RangeInclusive => {
+                quote! { ::verus_spec_check::__vcheck_range_inclusive_view(&#value) }
+            }
+            _ => quote! { #value },
+        }
+    }
+
+    /// Spec-side form of `(<value>)@` for an arbitrary expression.
+    pub fn view_form_expr(&self, value: &Expr) -> Expr {
+        match self {
+            StdValueKind::NonZero => verus_syn::parse_quote! { (#value).get() },
+            StdValueKind::RangeInclusive => verus_syn::parse_quote! {
+                ::verus_spec_check::__vcheck_range_inclusive_view(&(#value))
+            },
+            _ => value.clone(),
+        }
+    }
+}
+
+const NONZERO_ALIASES: [&str; 12] = [
+    "NonZeroU8",
+    "NonZeroU16",
+    "NonZeroU32",
+    "NonZeroU64",
+    "NonZeroU128",
+    "NonZeroUsize",
+    "NonZeroI8",
+    "NonZeroI16",
+    "NonZeroI32",
+    "NonZeroI64",
+    "NonZeroI128",
+    "NonZeroIsize",
+];
+
+/// Recognize a std value type by its last path segment.
+pub fn std_value_kind(ty: &Type, user_types: &HashSet<String>) -> Option<StdValueKind> {
+    let ty = match ty {
+        Type::Group(g) => g.elem.as_ref(),
+        Type::Paren(p) => p.elem.as_ref(),
+        other => other,
+    };
+    let Type::Path(tp) = ty else {
+        return None;
+    };
+    if tp.qself.is_some() {
+        return None;
+    }
+    let seg = tp.path.segments.last()?;
+    let name = seg.ident.to_string();
+    let bare = matches!(seg.arguments, PathArguments::None);
+    if bare && tp.path.segments.len() == 1 && user_types.contains(&name) {
+        return None;
+    }
+    let one_arg = || match &seg.arguments {
+        PathArguments::AngleBracketed(ab) => {
+            ab.args.len() == 1 && matches!(ab.args.first(), Some(GenericArgument::Type(_)))
+        }
+        _ => false,
+    };
+    let kind = match name.as_str() {
+        "Range" if one_arg() => StdValueKind::Range,
+        "RangeInclusive" if one_arg() => StdValueKind::RangeInclusive,
+        "RangeFrom" if one_arg() => StdValueKind::RangeFrom,
+        "RangeTo" if one_arg() => StdValueKind::RangeTo,
+        "RangeToInclusive" if one_arg() => StdValueKind::RangeToInclusive,
+        "RangeFull" if bare => StdValueKind::RangeFull,
+        "NonZero" if one_arg() => StdValueKind::NonZero,
+        n if bare && NONZERO_ALIASES.contains(&n) => StdValueKind::NonZero,
+        "Ordering" if bare && !tp.path.segments.iter().any(|s| s.ident == "atomic") => {
+            StdValueKind::Ordering
+        }
+        _ => return None,
+    };
+    Some(kind)
 }
 
 /// Which std iterator family an `IterState` param belongs to.
@@ -248,6 +348,7 @@ impl ParamShape {
                     }
                 }
             }
+            ParamShape::StdValue { ty, .. } => quote! { #ty },
         }
     }
 
@@ -323,6 +424,8 @@ impl ParamShape {
             ParamShape::IterState { .. } => quote! {
                 compile_error!("verus_spec_check internal: iterator param requires its prebinding")
             },
+            ParamShape::StdValue { by_ref: true, .. } => quote! { &#harness_ident },
+            ParamShape::StdValue { by_ref: false, .. } => quote! { #harness_ident.clone() },
         }
     }
 
@@ -632,6 +735,7 @@ impl ParamShape {
                 let order = format_ident!("__vcheck_iter_order_{}", harness_ident);
                 quote! { (#cur as i64, #order.as_slice()) }
             }
+            ParamShape::StdValue { kind, .. } => kind.view_form(harness_ident),
         }
     }
 
@@ -699,6 +803,7 @@ impl ParamShape {
             // `&Primitive`: snapshot is the primitive itself; spec
             // companions read it directly.
             ParamShape::RefPrimitive(_) => Some(quote! { #snap }),
+            ParamShape::StdValue { kind, .. } => Some(kind.view_form(&snap)),
             _ => None,
         }
     }
@@ -890,6 +995,7 @@ impl ParamShape {
                 };
                 quote! { (int, Seq<#inner>) }
             }
+            ParamShape::StdValue { ty, .. } => quote! { #ty },
         }
     }
 }
@@ -926,6 +1032,9 @@ pub fn classify_param_elem(ty: &Type, user_types: &HashSet<String>) -> Result<Pa
     // `Vec<()>`, where maximum-length containers are O(1) memory -- the
     // route to length-arithmetic boundary findings (append overflow).
     if matches!(ty, Type::Tuple(t) if t.elems.is_empty()) {
+        return Ok(ParamElem::Primitive(ty.clone()));
+    }
+    if std_value_kind(ty, user_types).is_some() {
         return Ok(ParamElem::Primitive(ty.clone()));
     }
     if let Type::Path(tp) = ty {
@@ -1320,6 +1429,7 @@ Pass the data by `&mut String` so the harness can snapshot it.",
                     | ParamShape::OwnedResult(_, _)
                     | ParamShape::OwnedUserType(_)
                     | ParamShape::Primitive(_)
+                    | ParamShape::StdValue { by_ref: false, .. }
                     // Slice & OwnedArray fall through here from the
                     // direct-match arms above. They're already wrapped
                     // by then, but accept them here too in case future
@@ -1346,6 +1456,13 @@ here doesn't fit; pass an owned form instead.",
             if let Type::Array(arr) = type_ref.elem.as_ref() {
                 let elem = classify_param_elem(&arr.elem, user_types)?;
                 return Ok(ParamShape::RefArray(elem, arr.len.clone()));
+            }
+            if let Some(kind) = std_value_kind(&type_ref.elem, user_types) {
+                return Ok(ParamShape::StdValue {
+                    ty: (*type_ref.elem).clone(),
+                    kind,
+                    by_ref: true,
+                });
             }
             // `&str` -- string slice. Classify here BEFORE the user-type
             // path, since `str` isn't a user type and isn't capitalized.
@@ -1592,12 +1709,20 @@ here doesn't fit; pass an owned form instead.",
                     if is_single_seg && is_primitive_like(&name) {
                         return Ok(ParamShape::Primitive(ty.clone()));
                     }
+                    if let Some(kind) = std_value_kind(ty, user_types) {
+                        return Ok(ParamShape::StdValue {
+                            ty: ty.clone(),
+                            kind,
+                            by_ref: false,
+                        });
+                    }
                     Err(Error::new_spanned(
                         ty,
                         format!(
                             "verus_spec_check: unsupported parameter type `{}`. Supported: primitives, \
                              `Vec<E>`, `&[E]`, `Option<E>`, `HashMap<K, V>`, `HashSet<E>`, \
-                             `Multiset<E>`, `&UserType`, and user-defined types.",
+                             `Multiset<E>`, `Range<E>` and the other `core::ops` ranges, \
+                             `NonZero<E>`, `Ordering`, `&UserType`, and user-defined types.",
                             name
                         ),
                     ))
@@ -1745,6 +1870,8 @@ pub enum ReturnShape {
     /// code lint can't see through that pattern, so suppress it.
     #[allow(dead_code)]
     Tuple2(Box<ReturnShape>, Box<ReturnShape>),
+    /// A std value type returned by value, see [`StdValueKind`].
+    StdValue(Type, StdValueKind),
 }
 
 pub fn classify_return(
@@ -1917,6 +2044,8 @@ pub fn classify_return(
                         Ok(ReturnShape::OpaqueConcretize(seg.ident.clone()))
                     } else if is_single_seg && user_types.contains(&name) {
                         Ok(ReturnShape::OwnedUserType(seg.ident.clone()))
+                    } else if let Some(kind) = std_value_kind(ty_ref, user_types) {
+                        Ok(ReturnShape::StdValue(ty_ref.clone(), kind))
                     } else if is_single_seg && is_primitive_like(&name) {
                         Ok(ReturnShape::Primitive)
                     } else if is_single_seg && name.chars().next().is_some_and(|c| c.is_uppercase())
@@ -2025,5 +2154,72 @@ mod real_acceptance_tests {
     fn non_spec_types_are_not_primitive_like() {
         assert!(!is_primitive_like("Foo"));
         assert!(!is_primitive_like("Seq"));
+    }
+}
+
+#[cfg(test)]
+mod std_value_tests {
+    use super::*;
+
+    fn uts(names: &[&str]) -> HashSet<String> {
+        names.iter().map(|n| n.to_string()).collect()
+    }
+
+    fn ty(src: &str) -> Type {
+        verus_syn::parse_str(src).unwrap()
+    }
+
+    fn kind_of(src: &str) -> Option<StdValueKind> {
+        std_value_kind(&ty(src), &uts(&[]))
+    }
+
+    fn param(src: &str) -> ParamShape {
+        classify_param_type(&ty(src), &uts(&[])).unwrap()
+    }
+
+    #[test]
+    fn recognizes_std_value_types() {
+        assert_eq!(kind_of("core::ops::Range<u8>"), Some(StdValueKind::Range));
+        assert_eq!(kind_of("RangeInclusive<char>"), Some(StdValueKind::RangeInclusive));
+        assert_eq!(kind_of("RangeFull"), Some(StdValueKind::RangeFull));
+        assert_eq!(kind_of("core::num::NonZero<i64>"), Some(StdValueKind::NonZero));
+        assert_eq!(kind_of("NonZeroU8"), Some(StdValueKind::NonZero));
+        assert_eq!(kind_of("core::cmp::Ordering"), Some(StdValueKind::Ordering));
+        assert_eq!(kind_of("std::sync::atomic::Ordering"), None);
+        assert_eq!(kind_of("Range<usize, usize>"), None);
+        assert_eq!(std_value_kind(&ty("Ordering"), &uts(&["Ordering"])), None);
+    }
+
+    #[test]
+    fn params_classify_and_lower() {
+        let id = format_ident!("x");
+        let owned = param("Range<usize>");
+        assert_eq!(owned.arg_for_real_call(&id).to_string(), quote! { x.clone() }.to_string());
+        let by_ref = param("&RangeInclusive<u8>");
+        assert_eq!(by_ref.arg_for_real_call(&id).to_string(), quote! { &x }.to_string());
+        assert_eq!(
+            by_ref.call_form_for_deep_view(&id).to_string(),
+            quote! { ::verus_spec_check::__vcheck_range_inclusive_view(&x) }.to_string()
+        );
+        assert_eq!(
+            param("NonZero<u32>").call_form_for_deep_view(&id).to_string(),
+            quote! { x.get() }.to_string()
+        );
+        let mutable = param("&mut Range<u16>");
+        assert!(matches!(&mutable, ParamShape::MutRef(inner)
+            if matches!(**inner, ParamShape::StdValue { by_ref: false, .. })));
+        assert!(mutable.pre_state_let(&id).is_some());
+        assert!(matches!(param("Option<Ordering>"), ParamShape::OwnedOption(ParamElem::Primitive(_))));
+    }
+
+    #[test]
+    fn std_value_returns_classify() {
+        let ret = |src: &str| {
+            let r: ReturnType = verus_syn::parse_str(&format!("-> {src}")).unwrap();
+            classify_return(&r, &uts(&[]), None).unwrap()
+        };
+        assert!(matches!(ret("NonZero<u32>"), ReturnShape::StdValue(_, StdValueKind::NonZero)));
+        assert!(matches!(ret("Option<NonZeroU16>"), ReturnShape::OwnedOption(ParamElem::Primitive(_))));
+        assert!(matches!(ret("Ordering"), ReturnShape::OwnedOrdering));
     }
 }

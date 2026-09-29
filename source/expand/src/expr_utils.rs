@@ -276,6 +276,10 @@ impl<'a> ContractRewriter<'a> {
                 // 2-tuple-of-primitives case works directly.
                 verus_syn::parse_quote_spanned! { ret_ident.span() => #ret_ident }
             }
+            ReturnShape::StdValue(_, kind) => {
+                let view = kind.view_form(&ret_ident);
+                verus_syn::parse_quote_spanned! { ret_ident.span() => #view }
+            }
         }
     }
 }

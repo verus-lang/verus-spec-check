@@ -634,5 +634,6 @@ pub fn return_shape_to_spec_type(shape: &ReturnShape) -> TokenStream2 {
         ReturnShape::OwnedOptionOrdering => quote! { Option<::core::cmp::Ordering> },
         ReturnShape::OpaqueConcretize(_) => quote! { int },
         ReturnShape::Tuple2(_, _) => quote! { (_, _) },
+        ReturnShape::StdValue(ty, _) => quote! { #ty },
     }
 }
