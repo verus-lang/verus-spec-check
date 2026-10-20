@@ -420,7 +420,42 @@ fn add_verus_spec_if_needed(attrs: &mut Vec<syn::Attribute>, span: proc_macro2::
     if attrs.iter().any(|attr| attr.path().get_ident().map_or(false, |ident| ident == VERUS_SPEC)) {
         return;
     }
+    // `#[cfg_attr(pred, verus_spec(..))]` is expanded after this attribute (code that is also
+    // built without Verus gates its specifications this way). An unconditional
+    // `#[verus_spec]` would make two when `pred` holds, so the empty one is added only where
+    // none of the predicates hold: `#[cfg_attr(not(any(pred, ..)), verus_spec)]`.
+    let preds: Vec<TokenStream> = attrs.iter().filter_map(cfg_attr_verus_spec_pred).collect();
+    if !preds.is_empty() {
+        attrs.push(crate::syntax::mk_rust_attr_syn(
+            span,
+            "cfg_attr",
+            quote_spanned! { span => not(any(#(#preds),*)), verus_spec },
+        ));
+        return;
+    }
     attrs.push(crate::syntax::mk_rust_attr_syn(span, VERUS_SPEC, TokenStream::new()));
+}
+
+/// The predicate of `#[cfg_attr(pred, .., verus_spec(..), ..)]`
+fn cfg_attr_verus_spec_pred(attr: &syn::Attribute) -> Option<TokenStream> {
+    if !attr.path().is_ident("cfg_attr") {
+        return None;
+    }
+    let syn::Meta::List(list) = &attr.meta else { return None };
+    // the predicate is everything before the first top-level `,`; the attributes follow, and a
+    // top-level identifier `verus_spec` there is the attribute (nested groups such as
+    // `verus_spec(..)` or `all(..)` are single token trees)
+    let mut pred = TokenStream::new();
+    let mut after_pred = false;
+    for tt in list.tokens.clone() {
+        match tt {
+            proc_macro2::TokenTree::Punct(p) if p.as_char() == ',' => after_pred = true,
+            proc_macro2::TokenTree::Ident(i) if after_pred && i == VERUS_SPEC => return Some(pred),
+            tt if !after_pred => pred.extend(std::iter::once(tt)),
+            _ => {}
+        }
+    }
+    None
 }
 
 /// Prepares items under `#[verus_verify]` for subsequent `#[verus_spec]` expansion.
@@ -835,12 +870,28 @@ pub(crate) fn rewrite_verus_spec_on_fun_or_loop(
             let mut signature = closure_to_fn_sig(&closure);
             let spec_stmts = syntax::sig_specs_attr(erase, spec_attr, &mut signature, false, true);
             let body = &closure.body;
+            let dcc = if erase.keep() {
+                Some(stmt_with_semi!(builtin, closure.span() =>
+                    #builtin::dummy_capture_consume(_verus_internal_identifier_for_closures)
+                ))
+            } else {
+                None
+            };
             let new_body = quote_spanned!(closure.body.span() =>
+                #dcc
                 #(#spec_stmts)*
                 {#body}
             );
             *closure.body = Expr::Verbatim(new_body);
-            closure.to_token_stream().into()
+            let toks = closure.to_token_stream();
+            let toks = if erase.keep() {
+                quote_spanned_builtin!(builtin, closure.span() =>
+                    { let _verus_internal_identifier_for_closures = #builtin::dummy_capture_new(); #toks }
+                )
+            } else {
+                toks
+            };
+            toks.into()
         }
         AnyFnOrLoop::TraitMethod(mut method) => {
             // Note: default trait methods appear in the AnyFnOrLoop::Fn case, not here

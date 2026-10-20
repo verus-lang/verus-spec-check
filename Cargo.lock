@@ -613,15 +613,15 @@ checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
 
 [[package]]
 name = "verus_builtin"
-version = "0.0.0-2026-09-16-0054"
+version = "0.0.0-2026-10-11-0230"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e4a9e69d45ddbe303075756d3fc2fcc965eb9dc70c80651d0e4458a6af1ed83"
+checksum = "d2e5d0972903f31da5271f50645c402122804a4e5292e1694706977ce18cbe67"
 
 [[package]]
 name = "verus_builtin_macros"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "213ca3e8a80925aec251d3f1952a213d6090156b58ad81dccc3a2f1fed77c99f"
+checksum = "c420824c5f3528bc29892c12c9083c03e8abe09119456e0ffe98ec3fb16ee5b8"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -644,7 +644,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 dependencies = [
  "verus_spec_check_macros",
  "verus_spec_check_runtime",
@@ -653,7 +653,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_assert"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -662,7 +662,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_attr"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -675,7 +675,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_engine"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -688,7 +688,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_exec_spec"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -698,7 +698,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_expand"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -714,7 +714,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_external_provide"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -724,7 +724,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_instrument"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -733,14 +733,14 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_macros"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 dependencies = [
  "verus_spec_check_engine",
 ]
 
 [[package]]
 name = "verus_spec_check_mutator"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -749,7 +749,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_runtime"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 dependencies = [
  "bolero",
  "bolero-generator",
@@ -764,7 +764,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_syntax"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -772,11 +772,11 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_test"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 
 [[package]]
 name = "verus_spec_check_vstd_ext"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 dependencies = [
  "verus_builtin",
  "verus_builtin_macros",
@@ -785,9 +785,9 @@ dependencies = [
 
 [[package]]
 name = "verus_state_machines_macros"
-version = "0.0.0-2026-09-06-0133"
+version = "0.0.0-2026-10-18-0147"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f78ea16629331605a440e9e0a259dd3492a78212186ba82253ad0988127407f"
+checksum = "999032b29d28518b813f7b474adbb958a2f41c606d72d84e986546309469eeef"
 dependencies = [
  "indexmap",
  "proc-macro2",
@@ -808,9 +808,9 @@ dependencies = [
 
 [[package]]
 name = "vstd"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb7a36bbc0193492141eef73272853a5a8d73288bed1ea5344563b0382cdf7c9"
+checksum = "eb200973a51d678d3432092ce692c110bf262e281d7ffd55ec028708be84d676"
 dependencies = [
  "verus_builtin",
  "verus_builtin_macros",

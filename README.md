@@ -99,10 +99,10 @@ path = "src/lib.rs"
 
 [dependencies]
 # Match the version your verus binary expects
-vstd = "=0.0.0-2026-09-20-0158"
+vstd = "=0.0.0-2026-10-18-0147"
 verus_spec_check = { path = "/path/to/verus-spec-check/source/verus_spec_check" }
 verus_spec_check_vstd_ext = { path = "/path/to/verus-spec-check/source/vstd_ext" }
-verus_builtin_macros = { version = "=0.0.0-2026-09-20-0158", features = ["contrib-hooks"] }
+verus_builtin_macros = { version = "=0.0.0-2026-10-18-0147", features = ["contrib-hooks"] }
 
 [package.metadata.verus]
 verify = true
