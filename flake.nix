@@ -12,7 +12,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
 
         # Pin the verus version that matches the overlay + version pins
-        verusVersion = "0.2026.10.04.426d8b0";
+        verusVersion = "0.2026.10.18.7d82994";
 
         # Additional pinned verus releases, exposed as packages
         # (`nix build .#verus-0308`) and dev shells
@@ -29,10 +29,10 @@
 
         # SHA-256 hashes for each platform's release zip
         srcHashes = {
-          "0.2026.10.04.426d8b0" = {
-            "arm64-macos" = "sha256-2ya1NUHd1+0nfThjcMHrFIMi3IV4qo9WbWvhk4VXb6Q=";
-            "x86-linux" = "sha256-Rvm9IKaTNgJ6G5ywgxT6duoAHn7SxnxEiwOklV2v7uw=";
-            "x86-macos" = "sha256-3jK8yOkqz16EOtwmKO8F0dab2bnaVn0MdQOp80mLBLc=";
+          "0.2026.10.18.7d82994" = {
+            "arm64-macos" = "sha256-Uu1FSFU5Vgq+1J5wHoYdYE4CV4yxHygIDgIgm8Nl8U8=";
+            "x86-linux" = "sha256-3jXjAskHWK3GoX9HgGTdTDUveuazXcyHcMKxFD5gMUU=";
+            "x86-macos" = "sha256-m7RYNGeiYoEYgkv1J9ElklNyiy1gntVolX4W5zBuLZY=";
           };
           "0.2026.03.08.23dc6e7" = {
             "arm64-macos" = "";
