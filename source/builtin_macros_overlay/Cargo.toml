@@ -1,4 +1,4 @@
-# THIS FILE IS DERIVED from upstream verus_builtin_macros 0.0.0-2026-09-20-0158's
+# THIS FILE IS DERIVED from upstream verus_builtin_macros 0.0.0-2026-10-18-0147's
 # manifest by tools/release/overlay-resync.sh. Do not edit by hand:
 # re-run the resync. Overlay delta: build.rs wiring, the
 # contrib-hooks feature (if pre-seam), verus_spec_check_engine dep, [workspace].
@@ -16,7 +16,7 @@
 [package]
 edition = "2018"
 name = "verus_builtin_macros"
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-10-18-0147"
 build = "build.rs"
 autolib = false
 autobins = false
@@ -37,6 +37,7 @@ repository = "https://github.com/verus-lang/verus"
 resolver = "2"
 
 [package.metadata.verus]
+fmt-as-rust = true
 is-builtin-macros = true
 
 [features]
@@ -181,6 +182,8 @@ check-cfg = [
 ]
 
 # --- verus-spec-check overlay additions (see header) -------------------------------
+# The external engine. vcheck entry points and the contrib-hooks provider
+# delegate here.
 [dependencies.verus_spec_check_engine]
 path = "../engine"
 
