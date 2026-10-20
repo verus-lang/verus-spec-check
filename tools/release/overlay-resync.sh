@@ -5,8 +5,8 @@
 # `verus_builtin_macros` release, applying the verus-spec-check overlay delta.
 #
 # The overlay is a surgical fork of stock `verus_builtin_macros`. The delta is:
-#   - DELETE  src/contrib/exec_spec.rs      (engine logic lives externally)
-#   - ADD     src/contrib/hooks.rs          (the contrib-hooks seam; verbatim)
+#   - DELETE  src/contrib/exec_spec.rs      (engine logic lives externally; pre-seam only)
+#   - ADD     src/contrib/hooks.rs          (the contrib-hooks seam; verbatim; pre-seam only)
 #   - PATCH   src/lib.rs, src/contrib/mod.rs, src/rustdoc.rs
 #   - REPLACE Cargo.toml                     (rendered from a template)
 #   - (root files build.rs + contrib_hooks_provider.rs are overlay-owned and
@@ -69,9 +69,11 @@ cp -r "$PRISTINE/src" "$OVERLAY/src"
 # Seam detection: Verus releases from 2026-07-27 onward ship the
 # `contrib::hooks` seam in stock verus_builtin_macros (hooks.rs, the
 # `contrib-hooks` feature, and the preprocess calls in contrib/mod.rs are all
-# upstream now — hooks.rs is byte-identical to what this overlay used to add).
+# upstream now). Upstream OWNS hooks.rs from that point and may edit it
+# (e.g. 2026-10-18 dropped a blank line), so the copy under resync/files/ is
+# only the pre-seam asset and is never compared against seam-era upstreams.
 # When the seam is upstream, the overlay needs NO contrib/ changes at all:
-#   - don't add hooks.rs        (stock already has it)
+#   - don't add hooks.rs        (stock already has it; upstream's copy wins)
 #   - don't patch mod.rs        (stock already calls the hooks)
 #   - don't delete exec_spec.rs (stock mod.rs declares it; it's dead code here
 #     since lib.rs redirects the exec_spec entry points to the engine, but
@@ -98,15 +100,19 @@ if [ -f "$RESYNC/manifest.txt" ]; then
 fi
 
 # 4. Copy overlay-owned added files in verbatim (files/ mirrors the crate
-#    root). Skip any file pristine upstream already ships byte-identically
-#    (e.g. hooks.rs once the seam is upstream); if upstream ships a DIFFERENT
-#    version of a file we add, that's a conflict a human must resolve.
+#    root). Skip any file pristine upstream already ships byte-identically.
+#    On seam-era upstreams, hooks.rs is upstream-owned: use upstream's copy
+#    even if it differs from ours. Any OTHER added file that upstream now
+#    ships differently is a conflict a human must resolve.
 if [ -d "$RESYNC/files" ]; then
   while IFS= read -r f; do
     rel="${f#"$RESYNC/files/"}"
     if [ -f "$PRISTINE/$rel" ]; then
       if diff -q "$f" "$PRISTINE/$rel" >/dev/null 2>&1; then
         echo "-- skipping add of $rel (identical file is upstream now)"
+        continue
+      elif [ "$SEAM_UPSTREAM" -eq 1 ] && [ "$rel" = "src/contrib/hooks.rs" ]; then
+        echo "-- using upstream $rel (seam upstream; upstream owns it now)"
         continue
       else
         echo "FATAL: upstream now ships $rel but it differs from our copy." >&2
