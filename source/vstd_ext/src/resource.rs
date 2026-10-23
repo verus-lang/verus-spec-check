@@ -29,15 +29,68 @@
 //! `VcheckResource` (e.g. the one for `vstd::PPtr`) gets a `read_back`, which triggers
 //! `take` (e.g. `vstd::PPtr::take`), minting a permission with `assume_new`.
 //!
-//! The lifetime of a vcheck sample is:
+//! ## Lifecycle of a test over a tracked permission spec on `PPtr`
+//!
+//! At a high level, tests proceed over the following steps:
 //! 1. sample `ExecMemContents`
 //! 2. materialize it with `vcheck_materialize` to get your sample and your state
 //! 3. call it under test
 //! 4. apply the transition the contract dictates, e.g. `init`/`uninit`/`consumed`
 //! 5. read it back and move it out if there are final-value ensures to check, then drop it
 //!
-//! Also note, these additons happen during macro processing-time; after these additions,
-//! Verus proceeds with the tracked permission erasure procedure that erases ghost types.
+//! Going into more detail:
+//! ```
+//! #[vcheck]
+//!     | fn_under_test(ptr: PPtr<V>, Tracked(perm): Tracked<&mut PointsTo<V>>)
+//!     |     requires f(old(perm).mem_contents())
+//!     |     ensures  g(final(perm).mem_contents())
+//!     |
+//!     |  exec_spec_unverified!   emits exec_f, exec_g from f, g     [exec_spec]
+//!     |
+//!     +--> cargo verus verify: go through the verus pipeline
+//!     |
+//!     +--> cargo test: go through the below pipeline
+//!     v
+//! pre: ExecMemContents<V>          Uninit OR Init(v) drawn by sampler
+//!     |
+//!     |  exec_f(&pre) -> bool      does pre satisfy the requires?
+//!     |    why: exec_f(&pre) == f(pre.deep_view())
+//!     |    false -> skip the sample, go to next
+//!     |
+//!     |  VcheckResourceGuard::materialize(pre)                  [resource.rs]
+//!     |    Init(v) -> PPtr::new(v)    allocate + write v        [vstd]
+//!     |    Uninit  -> PPtr::empty()   allocate only             [vstd]
+//!     |    why: new/empty ensure perm.mem_contents() == pre.deep_view()
+//!     v
+//! guard: handle + state            handle = PPtr<V>, the memory's address
+//!                                  state  = Init | Uninit
+//!                                  Tracked<PointsTo<V>> is erased at runtime
+//!     |
+//!     |  fn_under_test(guard.handle(), Tracked::assume_new())
+//!     |    guard.handle(): the PPtr<V>                          [resource.rs]
+//!     |    Tracked::assume_new(): empty permission stand-in     [vstd]
+//!     v
+//! call returned                    memory changed
+//!     |
+//!     |  guard.mark_init / mark_uninit / defuse, per ensures    [resource.rs]
+//!     |    not checked: taken on faith from the contract
+//!     |  guard.read_back(): if Init, PPtr::take moves v out     [resource.rs]
+//!     |    why: take ensures post.deep_view() == final(perm).mem_contents()
+//!     v
+//! post: ExecMemContents<V>
+//!     |
+//!     |  exec_g(&post) -> bool     does post satisfy the ensures?
+//!     |    why: exec_g(&post) == g(post.deep_view())
+//!     |    false -> panic, test fails
+//!     |
+//!     |  guard dropped                                          [resource.rs]
+//!     v
+//! memory freed                     Init -> into_inner, Uninit -> free,
+//!                                  Consumed -> nothing
+//!
+//! END     every sample passed -> test passes
+//!         any panic -> test fails (guard's Drop still frees memory)
+//! ```
 //!
 //! ## Toolchain notes (why this file is NOT inside `verus! {}`)
 //!
