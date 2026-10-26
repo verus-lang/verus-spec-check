@@ -7,10 +7,10 @@ edition = "2021"
 path = "src/lib.rs"
 
 [dependencies]
-vstd = "=0.0.0-2026-10-18-0147"
+vstd = "=0.0.0-2026-10-25-0158"
 verus_spec_check = { path = "../../source/verus_spec_check" }
 verus_spec_check_vstd_ext = { path = "../../source/vstd_ext" }
-verus_builtin_macros = { version = "=0.0.0-2026-10-18-0147", features = ["contrib-hooks"] }
+verus_builtin_macros = { version = "=0.0.0-2026-10-25-0158", features = ["contrib-hooks"] }
 
 [package.metadata.verus]
 verify = true
