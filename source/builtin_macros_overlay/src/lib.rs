@@ -7,7 +7,8 @@
 #![cfg_attr(
     verus_keep_ghost,
     feature(proc_macro_expand),
-    feature(proc_macro_diagnostic)
+    feature(proc_macro_diagnostic),
+    feature(proc_macro_def_site)
 )]
 
 use std::sync::OnceLock;

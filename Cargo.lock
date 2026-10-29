@@ -619,9 +619,9 @@ checksum = "d2e5d0972903f31da5271f50645c402122804a4e5292e1694706977ce18cbe67"
 
 [[package]]
 name = "verus_builtin_macros"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c420824c5f3528bc29892c12c9083c03e8abe09119456e0ffe98ec3fb16ee5b8"
+checksum = "6f5a08140947047ad8e35869c59a61471e62591b7d53ea8813009ee4b1fd4867"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -644,7 +644,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 dependencies = [
  "verus_spec_check_macros",
  "verus_spec_check_runtime",
@@ -653,7 +653,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_assert"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -662,7 +662,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_attr"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -675,7 +675,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_engine"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -688,7 +688,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_exec_spec"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -698,7 +698,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_expand"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -714,7 +714,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_external_provide"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -724,7 +724,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_instrument"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -733,14 +733,14 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_macros"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 dependencies = [
  "verus_spec_check_engine",
 ]
 
 [[package]]
 name = "verus_spec_check_mutator"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -749,7 +749,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_runtime"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 dependencies = [
  "bolero",
  "bolero-generator",
@@ -764,7 +764,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_syntax"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -772,11 +772,11 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_test"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 
 [[package]]
 name = "verus_spec_check_vstd_ext"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 dependencies = [
  "verus_builtin",
  "verus_builtin_macros",
@@ -785,9 +785,9 @@ dependencies = [
 
 [[package]]
 name = "verus_state_machines_macros"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "999032b29d28518b813f7b474adbb958a2f41c606d72d84e986546309469eeef"
+checksum = "83eba47213393992206731c1c94b946112c43e1aaf4939dc1b19b83bac1936e2"
 dependencies = [
  "indexmap",
  "proc-macro2",
@@ -808,9 +808,9 @@ dependencies = [
 
 [[package]]
 name = "vstd"
-version = "0.0.0-2026-10-18-0147"
+version = "0.0.0-2026-10-25-0158"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb200973a51d678d3432092ce692c110bf262e281d7ffd55ec028708be84d676"
+checksum = "e738decec9a809c06589281c48d96929e007079707d4e03018734daa4b20967f"
 dependencies = [
  "verus_builtin",
  "verus_builtin_macros",
