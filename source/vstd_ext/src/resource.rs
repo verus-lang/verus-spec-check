@@ -39,7 +39,7 @@
 //! 5. read it back and move it out if there are final-value ensures to check, then drop it
 //!
 //! Going into more detail:
-//! ```
+//! ```text
 //! #[vcheck]
 //!     | fn_under_test(ptr: PPtr<V>, Tracked(perm): Tracked<&mut PointsTo<V>>)
 //!     |     requires f(old(perm).mem_contents())
