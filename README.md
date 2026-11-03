@@ -86,7 +86,9 @@ See `USAGE.md` for more information.
 
 ## Quick start
 
-In your project's `Cargo.toml`:
+Each `verus-spec-check` release is a git tag named `verus-<date>`, after the
+Verus binary release it is paired with. Depend on a tag directly from your
+project's `Cargo.toml`; no local checkout is needed:
 
 ```toml
 [package]
@@ -98,22 +100,31 @@ edition = "2021"
 path = "src/lib.rs"
 
 [dependencies]
-# Match the version your verus binary expects
 vstd = "=0.0.0-2026-11-01-0251"
-verus_spec_check = { path = "/path/to/verus-spec-check/source/verus_spec_check" }
-verus_spec_check_vstd_ext = { path = "/path/to/verus-spec-check/source/vstd_ext" }
-verus_builtin_macros = { version = "=0.0.0-2026-11-01-0251", features = ["contrib-hooks"] }
+verus_spec_check = { git = "https://github.com/verus-lang/verus-spec-check", tag = "verus-2026-11-02" }
+verus_spec_check_vstd_ext = { git = "https://github.com/verus-lang/verus-spec-check", tag = "verus-2026-11-02" }
 
 [package.metadata.verus]
 verify = true
 
-# substitutes the verus_builtin_macros overlay for the stock crate,
-# providing the support for the #[vcheck] attribute
+# Substitutes the verus-spec-check overlay for the stock verus_builtin_macros,
+# which is what makes `verus!` process the #[vcheck] attribute.
 [patch.crates-io]
-verus_builtin_macros = { path = "/path/to/verus-spec-check/source/builtin_macros_overlay" }
+verus_builtin_macros = { git = "https://github.com/verus-lang/verus-spec-check", tag = "verus-2026-11-02" }
 ```
 
-Additionally, a Nix flake is provided for the instantiation of a compatible version of Verus, the Verus standard library, and `verus-spec-check`.
+Keep the `=` in the `vstd` requirement. Each release is built against exactly
+one vstd version, and a plain `"0.0.0-..."` requirement lets cargo select a
+newer vstd that conflicts with it (see USAGE.md, "Troubleshooting").
+
+The Verus binary must come from the same release: `0.2026.11.02.8bf68ee` for
+the tag above. Download it from the
+[Verus releases](https://github.com/verus-lang/verus/releases), or run
+`nix develop` in a checkout of the tag.
+
+To work against a local checkout instead, replace each `git = ..., tag = ...`
+with a `path`: `source/verus_spec_check`, `source/vstd_ext`, and
+`source/builtin_macros_overlay` inside the checkout.
 
 ## License
 
