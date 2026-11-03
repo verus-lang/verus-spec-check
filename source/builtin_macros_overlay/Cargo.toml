@@ -1,4 +1,4 @@
-# THIS FILE IS DERIVED from upstream verus_builtin_macros 0.0.0-2026-10-25-0158's
+# THIS FILE IS DERIVED from upstream verus_builtin_macros 0.0.0-2026-11-01-0251's
 # manifest by tools/release/overlay-resync.sh. Do not edit by hand:
 # re-run the resync. Overlay delta: build.rs wiring, the
 # contrib-hooks feature (if pre-seam), verus_spec_check_engine dep, [workspace].
@@ -16,7 +16,7 @@
 [package]
 edition = "2018"
 name = "verus_builtin_macros"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 build = "build.rs"
 autolib = false
 autobins = false
@@ -71,10 +71,10 @@ features = [
 version = "0.13.2"
 
 [dependencies.verus_prettyplease]
-version = "=0.0.0-2026-09-06-0133"
+version = "=0.0.0-2026-11-01-0251"
 
 [dependencies.verus_syn]
-version = "=0.0.0-2026-09-06-0133"
+version = "=0.0.0-2026-11-01-0251"
 features = [
     "full",
     "visit",
@@ -186,15 +186,6 @@ check-cfg = [
 # delegate here.
 [dependencies.verus_spec_check_engine]
 path = "../engine"
-
-# On seam-era upstreams the stock contrib/exec_spec.rs is kept but
-# unreachable (lib.rs redirects the exec_spec entry points to the engine),
-# so dead_code would fire ~44 warnings on every downstream `cargo test`.
-# Scoped to dead_code only; harmless on pre-seam lines where the file is
-# deleted. Dead-code hygiene for the mirrored upstream code is upstream's
-# concern.
-[lints.rust]
-dead_code = "allow"
 
 # Standalone — not a member of the verus-spec-check workspace (its package name
 # `verus_builtin_macros` would collide with the stock crate in the lockfile).

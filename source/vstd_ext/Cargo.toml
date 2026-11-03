@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
-description = "vstd-side exec_spec runtime types that the verus_spec_check engine emits paths into. Re-housed from `vstd::contrib::exec_spec::*` so that consumers of verus_spec_check do not need a forked vstd."
+description = "vstd-side exec_spec runtime types that the verus_spec_check engine emits paths into."
 keywords = ["verus", "verified-rust", "verification", "proptest"]
 categories = ["development-tools"]
 
@@ -17,9 +17,9 @@ path = "src/lib.rs"
 
 [dependencies]
 # Pulled from crates.io (registry) only
-vstd = "=0.0.0-2026-10-25-0158"
-verus_builtin_macros = "=0.0.0-2026-10-25-0158"
-verus_builtin = "=0.0.0-2026-10-11-0230"
+vstd = "=0.0.0-2026-11-01-0251"
+verus_builtin_macros = "=0.0.0-2026-11-01-0251"
+verus_builtin = "=0.0.0-2026-11-01-0251"
 
 [features]
 default = ["std"]

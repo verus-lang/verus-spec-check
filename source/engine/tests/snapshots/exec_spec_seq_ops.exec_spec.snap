@@ -1,3 +1,0 @@
-::core::compile_error!{
-    "Type cannot be compiled from spec code to exec code. Hint: supported types are primitive integers (uN, usize, iN, isize), bool, char, SpecString (for strings), Seq, Multiset, Map, Set."
-}

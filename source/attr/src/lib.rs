@@ -42,7 +42,6 @@ use verus_syn::{
 // Crate aliases so the module bodies' original `crate::<name>::*`
 // paths resolve
 use verus_spec_check_assert as vcheck_assert;
-use verus_spec_check_exec_spec as exec_spec;
 use verus_spec_check_external_provide as external_vcheck_provide;
 use verus_spec_check_syntax::vstd_kind;
 

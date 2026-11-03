@@ -26,7 +26,7 @@ selected Verus binary's tag.
 
 | Workflow | Trigger | Does |
 |---|---|---|
-| `ci.yml` | push to `main` / PR / manual | **tiered.** push+manual: quick checks (overlay reproducibility, pin consistency, workspace build, engine tests, snippet-suite harness tier). PR: the above plus the heavy Verus work (fetch pinned Verus, snippet-suite verify tier, crates.io-only packaging path). Docs-only PRs skip the heavy tier |
+| `ci.yml` | push to `main` / PR / manual | **tiered.** push+manual: quick checks (overlay reproducibility, pin consistency, workspace build, unit tests, snippet-suite harness tier). PR: the above plus the heavy Verus work (fetch pinned Verus, snippet-suite verify tier, crates.io-only packaging path). Docs-only PRs skip the heavy tier |
 | `update.yml` | Mon+Tue cron, manual | `sync-verus.sh latest` -> opens a PR for the newest Verus binary, independently retaining or updating the vstd line |
 | `release.yml` | manual, or push to `main` touching root `Cargo.toml` or `flake.nix` | if the Verus binary date isn't tagged yet, tag `verus-<date>`, move `latest`, create a GitHub release |
 | `backfill.yml` | manual (version input) | sync to an older same-date Verus/vstd line, validate, and tag `verus-<date>` |
@@ -75,37 +75,29 @@ and default to all when given none.
 
 ## When the weekly PR is red
 
-Almost always upstream drifted a file the overlay patches (the resync step in
-CI fails). To fix, on the PR branch:
+verus-spec-check uses upstream's `vstd` and `exec_spec` as-is, and the overlay's
+`src/` is stock upstream (the `contrib::hooks` seam is upstream, so no patches
+apply). The usual red case is upstream changing the exec_spec or vstd API that
+the generated harness code relies on. For example, 2026-11-01 replaced
+`ExecSpecEq` with `ObeysDeepEq` and stopped deriving `Debug` on `Exec*` types.
+To fix, on the PR branch:
 
-1. Run `tools/release/overlay-resync.sh <new-version>`; note which patch failed.
-2. Hand-edit `source/builtin_macros_overlay/src` so it compiles against the new
-   upstream.
-3. `tools/release/overlay-regen-patches.sh <new-version>` to rebuild the assets
-4. Commit and push. CI will re-validate
+1. Fix `source/expand` (or `source/engine` and the other split crates) so the
+   generated code compiles against the new upstream.
+2. If the expansion changed, regenerate the snapshots with
+   `UPDATE_VCHECK_SNAPSHOTS=1 cargo test -p verus_spec_check_engine --test expansion_snapshots`
+   and review the diff.
+3. Commit and push. CI will re-validate.
+
+If the overlay reproducibility step fails instead, `overlay-resync.sh` prints
+the reason. Reconcile it by hand in the script or the overlay. Don't run
+`overlay-regen-patches.sh` against a seam-era release: it would delete the
+`resync/` assets that pre-seam lines use.
 
 The other red case is `verus_syn` AST drift breaking the engine. Same idea, fix
 `source/engine` (and the split crates) on the branch.
 
 Also, Verus's Rust version bumps need to be manually accounted for.
-
-## If `vstd::contrib::exec_spec/*` changed
-
-Diff the old and new vstd source for `contrib/exec_spec/`:
-
-```bash
-diff -r ~/.cargo/registry/src/*/vstd-0.0.0-OLD-DATE/contrib/exec_spec \
-        ~/.cargo/registry/src/*/vstd-0.0.0-NEW-DATE/contrib/exec_spec
-```
-
-If there are changes, port them into `source/vstd_ext/src/exec_spec/`. The
-import-pattern rewrites stay the same:
-
-- `crate::contrib::exec_spec::*` -> `crate::exec_spec::*`
-- `crate::prelude::*` -> `vstd::prelude::*`
-- `crate::multiset::*` -> `vstd::multiset::*`
-- `crate::group_vstd_default` -> `vstd::group_vstd_default`
-- `crate::std_specs::hash::*` -> `vstd::std_specs::hash::*`
 
 ## Forked Helpers
 

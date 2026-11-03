@@ -613,15 +613,15 @@ checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
 
 [[package]]
 name = "verus_builtin"
-version = "0.0.0-2026-10-11-0230"
+version = "0.0.0-2026-11-01-0251"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2e5d0972903f31da5271f50645c402122804a4e5292e1694706977ce18cbe67"
+checksum = "b5cecde3e49b95f670dee0000707b0fe24d3894ffec56d9e6c49f404878b30e9"
 
 [[package]]
 name = "verus_builtin_macros"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f5a08140947047ad8e35869c59a61471e62591b7d53ea8813009ee4b1fd4867"
+checksum = "94dbd5043818524d73436d4dd20a8f67f8f8c13dc00d2662d643ce994ff2dbb5"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -634,9 +634,9 @@ dependencies = [
 
 [[package]]
 name = "verus_prettyplease"
-version = "0.0.0-2026-09-06-0133"
+version = "0.0.0-2026-11-01-0251"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71956c0dcf55f57fd5a5335fff16981f7e0912d2e887914518c5a64fe36c063c"
+checksum = "2b2cf0618d8d5ed0cde78122effaf56f5be0a0d0e0f9066735fa9f17d6ba6a4a"
 dependencies = [
  "proc-macro2",
  "verus_syn",
@@ -644,7 +644,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 dependencies = [
  "verus_spec_check_macros",
  "verus_spec_check_runtime",
@@ -653,7 +653,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_assert"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -662,12 +662,11 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_attr"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 dependencies = [
  "proc-macro2",
  "quote",
  "verus_spec_check_assert",
- "verus_spec_check_exec_spec",
  "verus_spec_check_external_provide",
  "verus_spec_check_syntax",
  "verus_syn",
@@ -675,36 +674,24 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_engine"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 dependencies = [
  "proc-macro2",
  "quote",
  "verus_spec_check_attr",
- "verus_spec_check_exec_spec",
  "verus_spec_check_expand",
  "verus_spec_check_syntax",
  "verus_syn",
 ]
 
 [[package]]
-name = "verus_spec_check_exec_spec"
-version = "0.0.0-2026-10-25-0158"
-dependencies = [
- "proc-macro2",
- "quote",
- "verus_spec_check_syntax",
- "verus_syn",
-]
-
-[[package]]
 name = "verus_spec_check_expand"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 dependencies = [
  "proc-macro2",
  "quote",
  "verus_spec_check_assert",
  "verus_spec_check_attr",
- "verus_spec_check_exec_spec",
  "verus_spec_check_external_provide",
  "verus_spec_check_instrument",
  "verus_spec_check_mutator",
@@ -714,17 +701,16 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_external_provide"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 dependencies = [
  "proc-macro2",
  "quote",
- "verus_spec_check_exec_spec",
  "verus_syn",
 ]
 
 [[package]]
 name = "verus_spec_check_instrument"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -733,14 +719,14 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_macros"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 dependencies = [
  "verus_spec_check_engine",
 ]
 
 [[package]]
 name = "verus_spec_check_mutator"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -749,7 +735,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_runtime"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 dependencies = [
  "bolero",
  "bolero-generator",
@@ -764,7 +750,7 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_syntax"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -772,11 +758,11 @@ dependencies = [
 
 [[package]]
 name = "verus_spec_check_test"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 
 [[package]]
 name = "verus_spec_check_vstd_ext"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 dependencies = [
  "verus_builtin",
  "verus_builtin_macros",
@@ -785,9 +771,9 @@ dependencies = [
 
 [[package]]
 name = "verus_state_machines_macros"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83eba47213393992206731c1c94b946112c43e1aaf4939dc1b19b83bac1936e2"
+checksum = "36b7a87f62a49719385cad07ad58ad9d17af29642dd331a5cdc25eba2423b716"
 dependencies = [
  "indexmap",
  "proc-macro2",
@@ -797,9 +783,9 @@ dependencies = [
 
 [[package]]
 name = "verus_syn"
-version = "0.0.0-2026-09-06-0133"
+version = "0.0.0-2026-11-01-0251"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d8b53574934e1f608dfccd809ce17f3733d6eb99c14ce8220326121929e1637"
+checksum = "461620a5ec0fb547ba398e42fb25a017bd8764798a32099eed73c77dd979ac39"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -808,9 +794,9 @@ dependencies = [
 
 [[package]]
 name = "vstd"
-version = "0.0.0-2026-10-25-0158"
+version = "0.0.0-2026-11-01-0251"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e738decec9a809c06589281c48d96929e007079707d4e03018734daa4b20967f"
+checksum = "7cfcc2fc379ffbcda31111f1a7da2a34d00bd984407cfa85d1edcf64da38dbd2"
 dependencies = [
  "verus_builtin",
  "verus_builtin_macros",

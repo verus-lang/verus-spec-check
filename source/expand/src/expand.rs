@@ -66,11 +66,22 @@ pub fn expand(input: TokenStream, verified: bool) -> TokenStream {
         }
     };
 
-    let engine_block: TokenStream2 =
-        crate::exec_spec::exec_spec(engine_items_ts.into(), /*unverified=*/ !verified).into();
+    let v = crate::syntax::Vstd(Span::call_site());
+    let engine_block: TokenStream2 = if verified {
+        quote! {
+            #[allow(unused_imports)]
+            use #v::contrib::exec_spec::*;
+            #v::contrib::exec_spec::exec_spec_verified! { #engine_items_ts }
+        }
+    } else {
+        quote! {
+            #[allow(unused_imports)]
+            use #v::contrib::exec_spec::*;
+            #v::contrib::exec_spec::exec_spec_unverified! { #engine_items_ts }
+        }
+    };
 
     // Pass-through items.
-    let v = crate::syntax::Vstd(Span::call_site());
     let passthrough_block = {
         let items = &classified.passthrough_items;
         quote! {

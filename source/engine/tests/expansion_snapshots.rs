@@ -1,8 +1,8 @@
 //! Golden-file expansion snapshots for the vcheck engine.
 //!
-//! These tests pin the exact token output of the three public engine
-//! entry points (`vcheck_provide_preprocess`, `expand_verus_spec_check`,
-//! `expand_exec_spec`) for a set of representative inputs drawn from
+//! These tests pin the exact token output of the two public engine
+//! entry points (`vcheck_provide_preprocess`, `expand_verus_spec_check`)
+//! for a set of representative inputs drawn from
 //! the `examples/` crates. They exist to make refactors of the engine
 //! internals provably behavior-preserving: any change to emitted
 //! tokens shows up as a snapshot diff.
@@ -483,30 +483,6 @@ const CASES: &[Case] = &[
     },
 ];
 
-/// exec_spec lowering cases fed straight to `expand_exec_spec`.
-const EXEC_SPEC_CASES: &[Case] = &[
-    Case {
-        name: "exec_spec_seq_ops",
-        expand: false,
-        src: r#"
-            spec fn total(s: Seq<u32>) -> int
-                decreases s.len(),
-            {
-                if s.len() == 0 { 0 } else { s[0] + total(s.skip(1)) }
-            }
-        "#,
-    },
-    Case {
-        name: "exec_spec_quantifier",
-        expand: false,
-        src: r#"
-            spec fn all_small(s: Seq<u32>) -> bool {
-                forall |i: int| 0 <= i < s.len() ==> s[i] < 100
-            }
-        "#,
-    },
-];
-
 // ---------------------------------------------------------------------------
 // Driver
 // ---------------------------------------------------------------------------
@@ -571,15 +547,6 @@ fn expansion_snapshots() {
                     failures.push(e);
                 }
             }
-        }
-    }
-
-    for case in EXEC_SPEC_CASES {
-        let ts: TokenStream = case.src.parse().expect("tokenize");
-        let expanded = verus_spec_check_engine::expand_exec_spec(ts, /*unverified=*/ true);
-        let rendered = normalize(&pretty(&expanded));
-        if let Err(e) = check_snapshot(&format!("{}.exec_spec", case.name), &rendered) {
-            failures.push(e);
         }
     }
 

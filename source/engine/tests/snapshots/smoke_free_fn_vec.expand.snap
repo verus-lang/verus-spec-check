@@ -1,25 +1,11 @@
-::vstd::prelude::verus!{
-    #[allow(unused_imports)]
-    use::verus_spec_check_vstd_ext::*;
+#[allow(unused_imports)]
+use::vstd::contrib::exec_spec::*;
+::vstd::contrib::exec_spec::exec_spec_unverified!{
     spec fn small_enough(s : Seq<i64>) -> bool {
         s.len() <= 16
     }
-    #[allow(unused_parens)]
-    #[allow(non_shorthand_field_patterns)]
-    #[verifier::loop_isolation(false)]
-    #[verifier::external_body]
-    fn exec_small_enough(s : &[< i64 as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType],) -> (res : < bool as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType) requires true ensures res.deep_view() =~~= small_enough(s.deep_view()) {
-        (((s).exec_len()) <= (16))
-    }
     spec fn appended(a : Seq<i64>, b : Seq<i64>, r : Seq<i64>) -> bool {
         r.len() == a.len() + b.len()
-    }
-    #[allow(unused_parens)]
-    #[allow(non_shorthand_field_patterns)]
-    #[verifier::loop_isolation(false)]
-    #[verifier::external_body]
-    fn exec_appended(a : &[< i64 as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType], b : &[< i64 as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType], r : &[< i64 as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType],) -> (res : < bool as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType) requires true ensures res.deep_view() =~~= appended(a.deep_view(), b.deep_view(), r.deep_view()) {
-        (::verus_spec_check_vstd_ext::ExecSpecEq::exec_eq(((r).exec_len()), (((a).exec_len()) + ((b).exec_len()))))
     }
 }
 ::vstd::prelude::verus!{

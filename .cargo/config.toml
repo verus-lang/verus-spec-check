@@ -5,6 +5,8 @@
 # variants that need a different PROPTEST_CASES value are documented
 # below as shell snippets rather than cargo aliases.
 
+include = [{ path = "../target/upstream-verus/config.toml", optional = true }]
+
 [alias]
 # Quick test run with default proptest settings (256 cases per harness).
 # Use this as the dev-loop alias.

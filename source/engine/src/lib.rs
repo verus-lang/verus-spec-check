@@ -7,7 +7,6 @@
 //!
 //! - `verus_spec_check_attr`: `#[vcheck]` / `#[vcheck_provide]` preprocessing.
 //! - `verus_spec_check_expand`: `verus_spec_check_unverified!` / `_verified!` expansion.
-//! - `verus_spec_check_exec_spec`: spec-to-exec lowering.
 //! - `verus_spec_check_external_provide`: `external_vcheck_provide!` companions.
 //! - `verus_spec_check_assert`: inline `#[vcheck] assert(...)` handling.
 //! - `verus_spec_check_mutator`: `#[vcheck_cov_mutate]` mutation sites.
@@ -22,9 +21,6 @@
 //! - [`expand_verus_spec_check`]: expand a `verus_spec_check_unverified!` /
 //!   `verus_spec_check_verified!` invocation. Called from the proc-macro
 //!   wrapper in `verus-spec-check-macros`.
-//! - [`expand_exec_spec`]: expand an `exec_spec_unverified!` /
-//!   `exec_spec_verified!` invocation (used by the
-//!   `verus_builtin_macros` overlay).
 //! - [`compile_error_external_vcheck_provide`]: produce the diagnostic
 //!   for `external_vcheck_provide!` outside `verus!{}`.
 
@@ -48,12 +44,6 @@ pub fn vcheck_provide_preprocess(items: &mut Vec<verus_syn::Item>) {
 /// `proc_macro::TokenStream` at the entry point.
 pub fn expand_verus_spec_check(input: TokenStream, verified: bool) -> TokenStream {
     verus_spec_check_expand::expand(input, verified)
-}
-
-/// Expand an `exec_spec_unverified!` / `exec_spec_verified!`
-/// invocation. The `unverified` flag picks the engine flavor.
-pub fn expand_exec_spec(input: TokenStream, unverified: bool) -> TokenStream {
-    verus_spec_check_exec_spec::exec_spec(input, unverified)
 }
 
 /// Produce the `compile_error!` diagnostic for `external_vcheck_provide!`

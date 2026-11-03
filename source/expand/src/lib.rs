@@ -38,7 +38,6 @@ use verus_syn::{
 // paths keep resolving after the split out of `verus_spec_check_engine`.
 use verus_spec_check_assert as vcheck_assert;
 use verus_spec_check_attr as vcheck_attr;
-use verus_spec_check_exec_spec as exec_spec;
 use verus_spec_check_external_provide as external_vcheck_provide;
 use verus_spec_check_instrument as vcheck_instrument;
 use verus_spec_check_mutator as vcheck_mutator;

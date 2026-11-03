@@ -1,7 +1,6 @@
-::vstd::prelude::verus!{
-    #[allow(unused_imports)]
-    use::verus_spec_check_vstd_ext::*;
-}
+#[allow(unused_imports)]
+use::vstd::contrib::exec_spec::*;
+::vstd::contrib::exec_spec::exec_spec_unverified!{}
 ::vstd::prelude::verus!{
     #[verifier::external_body]
     #[doc = "__verus_spec_check_harness_marker__"]
@@ -24,7 +23,7 @@ mod __verus_spec_check_ID {
     };
     #[allow(dead_code)]
     #[allow(unused_variables)]
-    fn exec_is_sorted(s : &[< i64 as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType]) -> < bool as::verus_spec_check_vstd_ext::ExecSpecType >::ExecOwnedType {
+    fn exec_is_sorted(s :::verus_spec_check_vstd_ext::exec_spec_type!(ref Seq<i64>)) ->::verus_spec_check_vstd_ext::exec_spec_type!(bool) {
         {
             let mut i = 0;
             while i + 1 < s.len() {

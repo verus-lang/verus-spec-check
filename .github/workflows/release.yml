@@ -91,6 +91,7 @@ jobs:
           vstd = "=$VSTD"
           verus_spec_check = { path = "~/verus-spec-check/source/verus_spec_check" }
           verus_spec_check_vstd_ext = { path = "~/verus-spec-check/source/vstd_ext" }
+          verus_builtin_macros = { version = "=$VSTD", features = ["contrib-hooks"] }
 
           [patch.crates-io]
           verus_builtin_macros = { path = "~/verus-spec-check/source/builtin_macros_overlay" }

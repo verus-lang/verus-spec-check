@@ -1,11 +1,6 @@
-// `proc_macro_tracked_env` was the only nightly feature the overlay
-// actually depends on for its runtime behavior; we replaced its use
-// in rustdoc.rs with stable `std::env::var`. The remaining two features
-// (`proc_macro_expand`, `proc_macro_diagnostic`) are gated on
-// `verus_keep_ghost` and only fire when verus's bundled rustc compiles
-// the overlay during `cargo verus verify`. Stable rustc skips them.
 #![cfg_attr(
     verus_keep_ghost,
+    feature(proc_macro_tracked_env),
     feature(proc_macro_expand),
     feature(proc_macro_diagnostic),
     feature(proc_macro_def_site)
@@ -342,7 +337,7 @@ pub fn calc_proc_macro(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 
 // If no #[verus_verify] on the item, it is verifier::external by default.
 // When compiling code with verus:
-// #[verus_verify] annotates the item with verifier::verify
+// #[verus_verify] annotates the item with verus::internal(verify)
 // #[verus_verify(external_body)] annotates the item with verifier::external_body
 // When compiling code with standard rust tool, the item has no verifier annotation.
 #[proc_macro_attribute]
@@ -380,7 +375,9 @@ pub fn proof(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// for verification.
 /// For example, declare a ghost/tracked variable.
 /// To avoid confusion, let stmts without ghost/tracked is not supported.
-/// Non-local stmts inside proof_decl! are treated similar to those in proof!
+/// Non-local stmts other than statement macros are treated similar to those in proof!
+/// Statement macros are not supported; invoke declaration macros in the surrounding
+/// scope or use proof! for proof statements.
 #[proc_macro]
 pub fn proof_decl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let erase = cfg_erase();
@@ -628,7 +625,7 @@ pub fn auto_spec(
 ///   - Primitive integer/boolean types (`i<N>`, `isize`, `u<N>`, `usize`, `char`, etc.). Note that `int` and `nat` cannot be used in `exec_spec_verified!`.
 #[proc_macro]
 pub fn exec_spec_verified(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    verus_spec_check_engine::expand_exec_spec(input.into(), /*unverified=*/ false).into()
+    contrib::exec_spec::exec_spec(input, false)
 }
 
 /// Automatically compiles spec items to exec items, but without proofs of functional correctness.
@@ -642,49 +639,7 @@ pub fn exec_spec_verified(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 ///     - `<typeI>` is a Rust primitive integer (`i<N>`, `isize`, `u<N>`, `usize`) or `char`. Note that `char` is not supported by quantifiers in `exec_spec_verified!`.
 #[proc_macro]
 pub fn exec_spec_unverified(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    verus_spec_check_engine::expand_exec_spec(input.into(), /*unverified=*/ true).into()
-}
-
-// ---------------------------------------------------------------------
-// vcheck proc-macro entry points (added by the verus-spec-check overlay).
-//
-// Upstream `verus_builtin_macros` did NOT historically include these
-// (the in-tree vcheck pipeline was removed), so we add them here pointing
-// at the external `verus_spec_check_engine` crate. Source-level consumers
-// (e.g. `vstd::contrib::verus_spec_check`) re-export these by name, so they
-// resolve as `verus_builtin_macros::verus_spec_check_unverified` etc.
-// ---------------------------------------------------------------------
-
-/// Property-based testing harness generator (no SMT verification of the
-/// spec ↔ exec mapping). Multiple fns in one block, each becomes a
-/// proptest harness. Runtime trait `VcheckStrategy` lives in the sibling
-/// `verus_spec_check_runtime` crate.
-#[proc_macro]
-pub fn verus_spec_check_unverified(
-    input: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
-    verus_spec_check_engine::expand_verus_spec_check(input.into(), /*verified=*/ false).into()
-}
-
-/// Same as `verus_spec_check_unverified!` but uses `exec_spec_verified!` for
-/// the engine block, which proves spec ≡ exec via SMT (narrower
-/// fragment).
-#[proc_macro]
-pub fn verus_spec_check_verified(
-    input: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
-    verus_spec_check_engine::expand_verus_spec_check(input.into(), /*verified=*/ true).into()
-}
-
-/// Trusted exec stub for spec functions defined outside the
-/// current `verus!` block. Consumed by the `#[vcheck]` whole-block
-/// preprocessing pass; surfacing this as a proc-macro lets the name
-/// resolve and produces a clear error if used outside `verus!{}`.
-#[proc_macro]
-pub fn external_vcheck_provide(
-    _input: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
-    verus_spec_check_engine::compile_error_external_vcheck_provide().into()
+    contrib::exec_spec::exec_spec(input, true)
 }
 
 /// Automate generating spec types and their View/DeepView implementations
@@ -703,6 +658,11 @@ pub fn self_view(
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     contrib::spec_derive::self_view(attr, input)
+}
+
+#[proc_macro]
+pub fn exec_spec_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    contrib::exec_spec::exec_spec_type(input)
 }
 
 /*** End of contrib macros ***/

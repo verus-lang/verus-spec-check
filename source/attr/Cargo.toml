@@ -18,7 +18,6 @@ proc-macro2.workspace = true
 quote.workspace = true
 verus_syn.workspace = true
 verus_spec_check_assert.workspace = true
-verus_spec_check_exec_spec.workspace = true
 verus_spec_check_external_provide.workspace = true
 verus_spec_check_syntax.workspace = true
 

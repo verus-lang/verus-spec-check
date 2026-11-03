@@ -1,5 +1,90 @@
 use super::*;
 
+/// Token-level rewrite of `self` to a non-keyword identifier in spec-mode
+/// clause expressions. Walks the token stream depth-first (recursing into
+/// `Group`s so `self` inside parens / brackets / braces is also rewritten)
+/// and replaces every literal `self` ident with `replacement`. Span on each
+/// rewritten token is preserved from the original `self` so diagnostics
+/// still point at the user's source.
+///
+/// ## Why this exists
+///
+/// When `compile_sig` translates an impl method's spec contract into the
+/// generated exec companion, the user's `requires` / `recommends` /
+/// `decreases` clauses were authored in spec-world: `self` in those
+/// clauses means "a value of the spec self type" (e.g. `&Counter`). The
+/// generated exec method's `self` is the runtime mirror (`&ExecCounter`),
+/// a structurally different type. Copying the clauses verbatim would
+/// type-check the wrong way — calls like `self.is_valid_spec()` would
+/// resolve to the exec companion (or fail to resolve), and field accesses
+/// might not match because the mirror sometimes has different field types
+/// than the spec.
+///
+/// ## How the rewrite is consumed
+///
+/// `compile_sig` emits a deep-view snapshot at the top of the exec method
+/// body:
+///
+/// ```ignore
+/// let __exec_spec_self_view: <SelfTy> = self.deep_view();
+/// ```
+///
+/// then runs every clause expression through this function with
+/// `replacement = __exec_spec_self_view`. The rewritten clause sees a
+/// spec-typed local where the user wrote `self`, so it type-checks and
+/// reasons in the spec universe.
+///
+/// ## Why a token-level rewrite (and not a `let self = ...` shadow)
+///
+/// `self` is a Rust keyword. `let self = ...` is a syntax error, so we
+/// can't directly shadow the receiver. The synthetic name avoids the
+/// keyword conflict.
+///
+/// ## What it doesn't handle (and why that's fine)
+///
+/// The rewrite is scope-agnostic: any token that prints as `self` becomes
+/// the replacement, regardless of whether it's the method receiver or
+/// some other binding. In practice no other `self` binding can exist,
+/// because `self` is a strict keyword in every Rust edition: per the
+/// [Rust Reference](https://doc.rust-lang.org/reference/keywords.html),
+/// strict keywords "cannot be used as the names of variables and
+/// function parameters, fields and variants, type parameters, lifetime
+/// parameters or loop labels, macros or attributes, macro placeholders,
+/// crates." That covers `let` patterns, match arm bindings, `if let`
+/// bindings, function parameters, and (transitively, since closure
+/// parameters are irrefutable patterns) closure parameter names. So
+/// the only `self` reachable in a clause is the method receiver, and
+/// the blunt rewrite is correct for all valid input. If a future Rust
+/// edition reclassifies `self` to a non-strict keyword, this function
+/// would need scope tracking; until then, the simple walk suffices.
+///
+/// ## Idempotence
+///
+/// Running this twice with the same `replacement` is a no-op after the
+/// first pass (no `self` tokens remain). Running it with a different
+/// `replacement` would clobber the first rewrite; not a concern in
+/// current callers since there's exactly one call site.
+fn replace_self_tokens(
+    ts: proc_macro2::TokenStream,
+    replacement: &Ident,
+) -> proc_macro2::TokenStream {
+    use proc_macro2::{Group, TokenTree};
+    ts.into_iter()
+        .map(|tt| match tt {
+            TokenTree::Ident(ident) if ident == "self" => {
+                TokenTree::Ident(Ident::new(&replacement.to_string(), ident.span()))
+            }
+            TokenTree::Group(g) => {
+                let mut new_g =
+                    Group::new(g.delimiter(), replace_self_tokens(g.stream(), replacement));
+                new_g.set_span(g.span());
+                TokenTree::Group(new_g)
+            }
+            other => other,
+        })
+        .collect()
+}
+
 /// Rewrite a marked trait impl `impl<T> Trait for X<T> { ... }` into an
 /// inherent impl `impl<T> X<T> { ... }`, mangling each method name with the
 /// trait's identifier (e.g. `view` becomes `View_view`) so multiple traits
@@ -222,7 +307,7 @@ pub fn lift_trait_method_to_free_fn(
     // clauses (requires/ensures/returns/decreases) and the body. We do this
     // token-wise by emitting each, running the rewrite, and re-parsing.
     let block = &method.block;
-    let body_tokens = crate::exec_spec::replace_self_tokens(quote! { #block }, &synth_self_name);
+    let body_tokens = replace_self_tokens(quote! { #block }, &synth_self_name);
     let new_block: verus_syn::Block = match verus_syn::parse2(body_tokens) {
         Ok(b) => b,
         Err(_) => return None,
@@ -234,7 +319,7 @@ pub fn lift_trait_method_to_free_fn(
     fn rewrite_specification_self(spec: &mut verus_syn::Specification, replacement: &Ident) {
         for e in spec.exprs.iter_mut() {
             let toks = quote! { #e };
-            let rewritten = crate::exec_spec::replace_self_tokens(toks, replacement);
+            let rewritten = replace_self_tokens(toks, replacement);
             if let Ok(new_e) = verus_syn::parse2::<Expr>(rewritten) {
                 *e = new_e;
             }
