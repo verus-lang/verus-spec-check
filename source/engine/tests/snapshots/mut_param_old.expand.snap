@@ -1,7 +1,6 @@
-::vstd::prelude::verus!{
-    #[allow(unused_imports)]
-    use::verus_spec_check_vstd_ext::*;
-}
+#[allow(unused_imports)]
+use::vstd::contrib::exec_spec::*;
+::vstd::contrib::exec_spec::exec_spec_unverified!{}
 ::vstd::prelude::verus!{
     #[doc = "__verus_spec_check_harness_marker__"]
     fn bump(x : &mut u32) requires * old(x) < 1000,

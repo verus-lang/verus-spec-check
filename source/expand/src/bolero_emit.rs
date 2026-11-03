@@ -195,18 +195,85 @@ pub fn emit_clone_impl_struct(name: &Ident, fields: &Fields) -> TokenStream2 {
     }
 }
 
-pub fn emit_debug_impl(name: &Ident) -> TokenStream2 {
+fn emit_debug_fields(label: &str, fields: &Fields, access: &[TokenStream2]) -> TokenStream2 {
+    match fields {
+        Fields::Named(named) => {
+            let names = named
+                .named
+                .iter()
+                .map(|f| f.ident.as_ref().unwrap().to_string());
+            quote! { f.debug_struct(#label)#(.field(#names, #access))*.finish() }
+        }
+        Fields::Unnamed(_) => quote! { f.debug_tuple(#label)#(.field(#access))*.finish() },
+        Fields::Unit => quote! { f.write_str(#label) },
+    }
+}
+
+pub fn emit_debug_impl_struct(name: &Ident, fields: &Fields) -> TokenStream2 {
     // We can't `#[derive(Debug)]` on the Verus-side type (Verus's derive
-    // handling rejects it), and we can't reference the user type's fields
-    // generically here without re-deriving. Instead, Debug delegates to the
-    // engine's `Exec*` companion (which DOES derive a full Debug) by
-    // converting through the generated `__vcheck_to_exec_*` fn. This gives
-    // useful counterexample output ("ExecUser { name_len: 1, ... }").
-    let conv = to_exec_fn_name(name);
+    // handling rejects it).
+    let access: Vec<TokenStream2> = match fields {
+        Fields::Named(named) => named
+            .named
+            .iter()
+            .map(|f| {
+                let n = f.ident.as_ref().unwrap();
+                quote! { &self.#n }
+            })
+            .collect(),
+        Fields::Unnamed(unnamed) => (0..unnamed.unnamed.len())
+            .map(|i| {
+                let idx = verus_syn::Index::from(i);
+                quote! { &self.#idx }
+            })
+            .collect(),
+        Fields::Unit => Vec::new(),
+    };
+    let body = emit_debug_fields(&name.to_string(), fields, &access);
     quote! {
         impl ::std::fmt::Debug for #name {
             fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-                ::std::fmt::Debug::fmt(&#conv(self), f)
+                #body
+            }
+        }
+    }
+}
+
+pub fn emit_debug_impl_enum(name: &Ident, item_enum: &ItemEnum) -> TokenStream2 {
+    let arms = item_enum.variants.iter().map(|variant| {
+        let vname = &variant.ident;
+        let label = vname.to_string();
+        match &variant.fields {
+            Fields::Named(named) => {
+                let names: Vec<&Ident> = named
+                    .named
+                    .iter()
+                    .map(|f| f.ident.as_ref().unwrap())
+                    .collect();
+                let access: Vec<TokenStream2> = names.iter().map(|n| quote! { #n }).collect();
+                let body = emit_debug_fields(&label, &variant.fields, &access);
+                quote! { #name::#vname { #(#names),* } => #body }
+            }
+            Fields::Unnamed(unnamed) => {
+                let names: Vec<Ident> = (0..unnamed.unnamed.len())
+                    .map(|i| format_ident!("__f{}", i))
+                    .collect();
+                let access: Vec<TokenStream2> = names.iter().map(|n| quote! { #n }).collect();
+                let body = emit_debug_fields(&label, &variant.fields, &access);
+                quote! { #name::#vname(#(#names),*) => #body }
+            }
+            Fields::Unit => {
+                let body = emit_debug_fields(&label, &variant.fields, &[]);
+                quote! { #name::#vname => #body }
+            }
+        }
+    });
+    quote! {
+        impl ::std::fmt::Debug for #name {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                match self {
+                    #(#arms),*
+                }
             }
         }
     }

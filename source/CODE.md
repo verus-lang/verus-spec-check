@@ -61,7 +61,7 @@ verus_spec_check_expand::expand
    ├─ verus_spec_check_expand::emit_harness
    │   └─ emit_harness_with_flavor()
    │
-   ├─ let engine_items = verus_spec_check_exec_spec::exec_spec
+   ├─ let engine_block = vstd::contrib::exec_spec::exec_spec_unverified!
    ├─ let strategy_impls = classified.map({
    │   ├─ UserType::Struct => emit_struct_support()
    │   ├─ UserType::Enum => emit_enum_support()
@@ -102,7 +102,6 @@ Each pipeline stage is a dedicated crate under `source/`:
 - `verus_spec_check_assert` (`source/assert`) -- inline `#[vcheck] assert(...)` discovery/rewriting
 - `verus_spec_check_mutator` (`source/mutator`) -- `#[vcheck_cov_mutate]` mutation-site enumeration 
 - `verus_spec_check_instrument` (`source/instrument`) -- `#[vcheck_cov_fuzz]` branch-site enumeration + body instrumentation 
-- `verus_spec_check_exec_spec` (`source/exec_spec`) -- spec-to-exec lowering (`exec_spec_*!`) 
 - `verus_spec_check_external_provide` (`source/external_provide`) -- `external_vcheck_provide!` companions 
 - `verus_spec_check_attr` (`source/attr`) -- `#[vcheck]`/`#[vcheck_provide]` preprocessing (folding pass) 
 - `verus_spec_check_expand` (`source/expand`) -- `verus_spec_check_*!` expansion (classify, lower, emit) 
@@ -179,14 +178,13 @@ passes), `audit.rs` (silent-no-op audit), `inline_assert_emit.rs`,
 ### Supporting crates
 - `builtin_macros_overlay`: manages the hooks for `verus_builtin_macros`; 
   target of the [patch.crates.io] call
-- `vstd_ext`: carries the `exec_spec` translations of spec types. Largely a mirror
-  of upstream Verus, except the tracked permission support with `mem_contents.rs` 
-  and `resource.rs`
+- `vstd_ext`: carries the `exec_spec` translations of spec types, plus the
+  tracked permission support in `resource.rs`
 - `verus_spec_check`: top-level crate
 - `runtime`: infrastructure for parsing proptest/bolero results
 - `macros`: exports macros and attributes provided by `verus-spec-check`
 - `engine`: thin facade re-exporting the split crates' entry points
-  (`vcheck_provide_preprocess`, `expand_verus_spec_check`, `expand_exec_spec`,
+  (`vcheck_provide_preprocess`, `expand_verus_spec_check`,
   `compile_error_external_vcheck_provide`); keeps the public API and the
   `path = "../engine"` location stable for the overlay and downstream
   `[patch.crates-io]` users

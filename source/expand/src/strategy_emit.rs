@@ -26,7 +26,7 @@ pub fn emit_struct_support(
     let conv = to_exec_fn_name(name);
 
     let clone_impl = emit_clone_impl_struct(name, &item_struct.fields);
-    let debug_impl = emit_debug_impl(name);
+    let debug_impl = emit_debug_impl_struct(name, &item_struct.fields);
 
     let strategy_impl = match &item_struct.fields {
         Fields::Named(named) => {
@@ -141,7 +141,7 @@ pub fn emit_enum_support(
     }
 
     let clone_impl = emit_clone_impl_enum(name, item_enum);
-    let debug_impl = emit_debug_impl(name);
+    let debug_impl = emit_debug_impl_enum(name, item_enum);
 
     let mut variant_arms: Vec<TokenStream2> = Vec::new();
     let mut conv_arms: Vec<TokenStream2> = Vec::new();

@@ -11,8 +11,8 @@
 //!   `cov_mutate::*`, `cov_fuzz::*`, the `proptest` re-export) --
 //!   re-exported from `verus_spec_check_runtime`.
 //! - vstd-side exec_spec types (`ExecSpecType`, `ToRef`, `ToOwned`,
-//!   `DeepViewClone`, `ExecSpecEq`, `ExecSpecIndex`, `ExecSpecLen`,
-//!   plus the `ExecMultiset` / Set / Map / Option helpers) -- defined in
+//!   `DeepViewClone`, `ObeysDeepEq`, `ExecSpecIndex`, `ExecSpecLen`,
+//!   plus the `ExecMultiset` / Set / Map / Option helpers) -- re-exported by
 //!   `verus_spec_check_vstd_ext` and used by the engine's emitted harness code.
 //!
 //! If you do not want to use the umbrella, you can just do:

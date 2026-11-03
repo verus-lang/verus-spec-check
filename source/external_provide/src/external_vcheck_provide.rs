@@ -44,8 +44,6 @@ use quote::quote;
 use verus_syn::parse::{Parse, ParseStream};
 use verus_syn::{Error, FnArgKind, Ident, ItemFn, ReturnType};
 
-use crate::exec_spec::{compile_type, TypeKind};
-
 /// Parsed `external_vcheck_provide! { fn ...; fn ...; }` body: a sequence of
 /// trusted exec stub functions written with spec-level signatures.
 pub struct ExternalProvide {
@@ -123,8 +121,8 @@ fn emit_one(f: &ItemFn) -> Result<TokenStream2, Error> {
                 });
                 continue;
             }
-            let ty = compile_type(&pt.ty, TypeKind::Ref)?;
-            params.push(quote! { #pat: #ty });
+            let ty = &pt.ty;
+            params.push(quote! { #pat: ::verus_spec_check_vstd_ext::exec_spec_type!(ref #ty) });
         }
     }
 
@@ -134,8 +132,7 @@ fn emit_one(f: &ItemFn) -> Result<TokenStream2, Error> {
             if is_int_nat(ty) {
                 quote! { ::verus_spec_check::SpecInt }
             } else {
-                let lowered = compile_type(ty, TypeKind::Owned)?;
-                quote! { #lowered }
+                quote! { ::verus_spec_check_vstd_ext::exec_spec_type!(#ty) }
             }
         }
     };

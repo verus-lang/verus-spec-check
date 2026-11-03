@@ -73,9 +73,7 @@ cp -r "$PRISTINE/src" "$OVERLAY/src"
 # When the seam is upstream, the overlay needs NO contrib/ changes at all:
 #   - don't add hooks.rs        (stock already has it)
 #   - don't patch mod.rs        (stock already calls the hooks)
-#   - don't delete exec_spec.rs (stock mod.rs declares it; it's dead code here
-#     since lib.rs redirects the exec_spec entry points to the engine, but
-#     removing it would force a mod.rs patch for no benefit)
+#   - don't delete exec_spec.rs (stock mod.rs declares it)
 # For pre-seam releases (2026-06-14 and older, incl. backfills) the seam
 # assets below are still applied. Do NOT regen-away the seam assets while
 # pre-seam lines remain supported.
@@ -104,6 +102,10 @@ fi
 if [ -d "$RESYNC/files" ]; then
   while IFS= read -r f; do
     rel="${f#"$RESYNC/files/"}"
+    if [ "$SEAM_UPSTREAM" -eq 1 ] && [ "$rel" = "src/contrib/hooks.rs" ]; then
+      echo "-- keeping stock $rel (seam upstream)"
+      continue
+    fi
     if [ -f "$PRISTINE/$rel" ]; then
       if diff -q "$f" "$PRISTINE/$rel" >/dev/null 2>&1; then
         echo "-- skipping add of $rel (identical file is upstream now)"
@@ -178,7 +180,7 @@ if ! grep -qE '^contrib-hooks\s*=' "$OVERLAY/Cargo.toml"; then
   fi
 fi
 
-# c) the engine dep, dead_code suppression, and standalone-workspace marker.
+# c) the engine dep and standalone-workspace marker.
 cat >> "$OVERLAY/Cargo.toml" <<'EOF'
 
 # --- verus-spec-check overlay additions (see header) -------------------------------
@@ -186,15 +188,6 @@ cat >> "$OVERLAY/Cargo.toml" <<'EOF'
 # delegate here.
 [dependencies.verus_spec_check_engine]
 path = "../engine"
-
-# On seam-era upstreams the stock contrib/exec_spec.rs is kept but
-# unreachable (lib.rs redirects the exec_spec entry points to the engine),
-# so dead_code would fire ~44 warnings on every downstream `cargo test`.
-# Scoped to dead_code only; harmless on pre-seam lines where the file is
-# deleted. Dead-code hygiene for the mirrored upstream code is upstream's
-# concern.
-[lints.rust]
-dead_code = "allow"
 
 # Standalone — not a member of the verus-spec-check workspace (its package name
 # `verus_builtin_macros` would collide with the stock crate in the lockfile).

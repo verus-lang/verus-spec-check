@@ -1,7 +1,6 @@
-::vstd::prelude::verus!{
-    #[allow(unused_imports)]
-    use::verus_spec_check_vstd_ext::*;
-}
+#[allow(unused_imports)]
+use::vstd::contrib::exec_spec::*;
+::vstd::contrib::exec_spec::exec_spec_unverified!{}
 ::vstd::prelude::verus!{
     #[verifier::external_body]
     #[inline(never)]

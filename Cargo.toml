@@ -9,7 +9,6 @@ members = [
     "source/assert",
     "source/mutator",
     "source/instrument",
-    "source/exec_spec",
     "source/external_provide",
     "source/attr",
     "source/expand",
@@ -26,7 +25,7 @@ resolver = "2"
 # Mirrors the Verus release line this tree is synced against (the vstd /
 # verus_builtin_macros pin). Maintained by tools/release/sync-verus.sh;
 # release.yml tags `verus-<date>` from this string.
-version = "0.0.0-2026-09-20-0158"
+version = "0.0.0-2026-11-01-0251"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/verus-lang/verus-spec-check"
@@ -47,13 +46,12 @@ proc-macro2 = "1.0.39"
 quote = "1.0"
 # When verus updates its `verus_syn` pin, bump this ONE line (all engine-internal
 # crates inherit it). See .github/workflows/README.md for the sync workflow.
-verus_syn = { version = "=0.0.0-2026-09-06-0133", features = ["full", "visit", "visit-mut", "extra-traits"] }
+verus_syn = { version = "=0.0.0-2026-11-01-0251", features = ["full", "visit", "visit-mut", "extra-traits"] }
 # Intra-workspace crates, declared once so member manifests stay terse.
 verus_spec_check_syntax = { path = "source/syntax" }
 verus_spec_check_assert = { path = "source/assert" }
 verus_spec_check_mutator = { path = "source/mutator" }
 verus_spec_check_instrument = { path = "source/instrument" }
-verus_spec_check_exec_spec = { path = "source/exec_spec" }
 verus_spec_check_external_provide = { path = "source/external_provide" }
 verus_spec_check_attr = { path = "source/attr" }
 verus_spec_check_expand = { path = "source/expand" }

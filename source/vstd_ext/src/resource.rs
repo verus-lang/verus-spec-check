@@ -58,7 +58,7 @@
 //! keyed on the shadow-model state, so every unwind path deallocates and
 //! drops the payload exactly once.
 
-use crate::exec_spec::ExecMemContents;
+use vstd::contrib::exec_spec::ExecMemContents;
 use vstd::prelude::Tracked;
 use vstd::simple_pptr::{PPtr, PointsTo};
 

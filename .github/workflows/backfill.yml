@@ -108,7 +108,7 @@ jobs:
       - name: Validate (build + engine tests + snippet suite)
         run: |
           nix develop --command cargo build --workspace
-          nix develop --command cargo test -p verus_spec_check_engine
+          nix develop --command cargo test --workspace --exclude verus_spec_check_test
           nix develop --command cargo test -p verus_spec_check_test
 
       - name: Tag and release (tag only, no branch)
