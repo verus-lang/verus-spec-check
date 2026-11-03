@@ -18,11 +18,6 @@ path = "src/lib.rs"
 vstd = "=@PIN@"
 verus_spec_check = { path = "@ROOT@/source/verus_spec_check" }
 verus_spec_check_vstd_ext = { path = "@ROOT@/source/vstd_ext" }
-# REQUIRED for `#[vcheck]` folding: the overlay's contrib-hooks feature is
-# off by default (matching stock Verus). Without this direct dep,
-# `#[vcheck]` resolves to a no-op attribute macro and zero harnesses are
-# generated (the Pass { harnesses: n } assertion catches that).
-verus_builtin_macros = { version = "=@PIN@", features = ["contrib-hooks"] }
 
 [package.metadata.verus]
 verify = true

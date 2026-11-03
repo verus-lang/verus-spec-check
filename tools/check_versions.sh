@@ -135,10 +135,11 @@ done
 
 # README quick-start snippet: every version-shaped string must match the
 # main pin (sync-verus.sh bumps them; this catches manual edits and any
-# release cycle where the bump missed prose/comments), and the snippet
-# must keep the direct `verus_builtin_macros` dep with contrib-hooks —
-# without that line `#[vcheck]` compiles away in a user's project and the
-# quick start silently produces 0 property tests.
+# release cycle where the bump missed prose/comments), every `verus-<date>`
+# release tag must match the Verus binary pinned in flake.nix, and the
+# snippet must keep the overlay `[patch.crates-io]` entry — without it
+# `#[vcheck]` compiles away in a user's project and the quick start
+# silently produces 0 property tests.
 main_pin=$(get_version "source/vstd_ext/Cargo.toml" "vstd")
 if [ -n "$main_pin" ] && [ -f README.md ]; then
     readme_drift=$(grep -oE '0\.0\.0-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}' README.md \
@@ -151,15 +152,43 @@ if [ -n "$main_pin" ] && [ -f README.md ]; then
     else
         echo "OK    README.md versions -> $main_pin"
     fi
-    if grep -q 'verus_builtin_macros = { version = "=' README.md \
-        && grep -q 'features = \["contrib-hooks"\]' README.md; then
-        echo "OK    README.md quick start declares verus_builtin_macros + contrib-hooks"
+    if grep -q '^\[patch\.crates-io\]' README.md \
+        && grep -qE '^verus_builtin_macros = \{ git = "[^"]+", tag = "' README.md; then
+        echo "OK    README.md quick start patches in the verus_builtin_macros overlay"
     else
-        echo "FAIL  README.md quick start is missing the direct verus_builtin_macros"
-        echo "        dep with features = [\"contrib-hooks\"] — without it #[vcheck]"
+        echo "FAIL  README.md quick start is missing the [patch.crates-io]"
+        echo "        verus_builtin_macros overlay entry — without it #[vcheck]"
         echo "        compiles away (see examples/readme/Cargo.toml)."
         errors=$((errors+1))
     fi
+    verus_bin=$(grep -oE 'verusVersion = "[^"]*";' flake.nix | head -1 \
+        | sed -E 's/verusVersion = "([^"]*)";/\1/')
+    verus_pin=$(echo "$verus_bin" | sed -E 's/^0\.([0-9]{4})\.([0-9]{2})\.([0-9]{2})\..*/\1-\2-\3/')
+    tag_drift=$( { grep -oE 'verus-[0-9]{4}-[0-9]{2}-[0-9]{2}' README.md \
+            | grep -v "^verus-${verus_pin}$";
+        grep -oE '0\.[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9a-f]+' README.md \
+            | grep -vF "$verus_bin"; } | sort -u || true)
+    if [ -n "$tag_drift" ]; then
+        echo "FAIL  README.md references a stale release tag or Verus binary:"
+        echo "$tag_drift" | sed 's/^/        /'
+        echo "        expected: verus-$verus_pin and $verus_bin (from flake.nix verusVersion)"
+        errors=$((errors+1))
+    else
+        echo "OK    README.md release tag -> verus-$verus_pin, Verus binary -> $verus_bin"
+    fi
+fi
+
+dup_names=$(find . \( -name target -o -name .git \) -prune -o -name Cargo.toml -print0 \
+    | xargs -0 awk '/^\[package\]/{p=1; next} /^\[/{p=0} p && /^name *=/{gsub(/[" ]/, ""); sub(/^name=/, ""); print; nextfile}' \
+    | sort | uniq -d)
+if [ -n "$dup_names" ]; then
+    echo "FAIL  package name(s) used by more than one Cargo.toml:"
+    echo "$dup_names" | sed 's/^/        /'
+    echo "        Cargo resolves path deps inside a git dependency by package name,"
+    echo "        so a duplicate can make git-dependency installs pick the wrong crate."
+    errors=$((errors+1))
+else
+    echo "OK    package names are unique"
 fi
 
 echo

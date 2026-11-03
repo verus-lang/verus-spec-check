@@ -502,6 +502,26 @@ compile when the `bolero` feature is on (which it is by default).
 `[dev-dependencies]`. The engine emits absolute paths into it from
 non-test code paths.
 
+### `failed to select a version for vstd`
+
+The full message looks like:
+```
+error: failed to select a version for `vstd`.
+    ... required by package `verus_spec_check_vstd_ext v0.0.0-...`
+versions that meet the requirements `=0.0.0-...` are: 0.0.0-...
+  previously selected package `vstd v0.0.0-<newer>`
+```
+verus-spec-check pins vstd exactly, and your project asks for a newer one.
+This usually means your `vstd` requirement has no `=`: cargo treats
+`vstd = "0.0.0-YYYY-MM-DD-NNNN"` as "this version or newer" and may lock a
+newer release. Pin it exactly, to the version in the verus-spec-check
+release you depend on (the README's quick start for that tag lists it):
+```toml
+vstd = "=0.0.0-YYYY-MM-DD-NNNN"
+```
+If `Cargo.lock` already holds the newer version, also run
+`cargo update -p vstd`.
+
 ### `expected generics to match found bool` (or similar deep vstd errors)
 
 vstd version doesn't match the verus binary expectation. Check:

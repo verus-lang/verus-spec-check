@@ -25,10 +25,9 @@ edition = "2021"
 path = "src/lib.rs"
 
 [dependencies]
-vstd = "=0.0.0-2026-06-14-0213"
+vstd = "=<the pin in source/vstd_ext/Cargo.toml>"
 verus_spec_check = { path = "../../source/verus_spec_check" }
 verus_spec_check_vstd_ext = { path = "../../source/vstd_ext" }
-verus_builtin_macros = { version = "=0.0.0-2026-06-14-0213", features = ["contrib-hooks"] }
 
 [package.metadata.verus]
 verify = true
