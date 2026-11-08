@@ -19,12 +19,18 @@
 //! value. Under coverage-guided fuzzing the fuzzer drives the selector byte
 //! itself, so this biasing degrades gracefully to "the fuzzer decides".
 
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::hash::Hash;
+use std::num::NonZero;
+use std::ops::{Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive};
 
 use bolero_generator::prelude::*;
 
-use crate::DEFAULT_COLLECTION_MAX;
+use crate::{
+    VcheckRangeIdx, ASCII_CHAR_EDGES, DEFAULT_COLLECTION_MAX, NON_ASCII_CHAR_EDGES,
+    SLICE_INDEX_WINDOW, STR_INDEX_WINDOW, ZST_BOUNDARY_LENS,
+};
 
 /// Bridge trait between `verus_spec_check_*` harnesses and `bolero_generator`. The
 /// bolero-backend analogue of [`crate::VcheckStrategy`]: for every parameter type
@@ -113,27 +119,22 @@ impl VcheckGen for bool {
     }
 }
 impl VcheckGen for char {
-    // Edge-biased toward UTF-8 encoding boundaries. Uniform `char` sampling
-    // rarely lands exactly on the code points where multi-byte-length or
-    // surrogate-adjacent logic changes, yet those are precisely where UTF-8
-    // spec-vs-impl bugs live. We hit each boundary with non-trivial
-    // probability and fall back to uniform for the rest.
+    // UTF-8 boundary, NUL, and char::MAX biased
     fn vcheck_gen() -> impl ValueGenerator<Output = Self> {
-        (produce::<u8>(), produce::<char>()).map_gen(|(sel, raw): (u8, char)| match sel % 16 {
-            0 => '\u{0}',      // NUL
-            1 => '\u{7f}',     // last 1-byte
-            2 => '\u{80}',     // first 2-byte
-            3 => '\u{7ff}',    // last 2-byte
-            4 => '\u{800}',    // first 3-byte
-            5 => '\u{d7ff}',   // last before surrogates
-            6 => '\u{e000}',   // first after surrogates
-            7 => '\u{ffff}',   // last 3-byte (BMP end)
-            8 => '\u{10000}',  // first 4-byte
-            9 => '\u{10ffff}', // max scalar
-            10 => 'A',
-            11 => ' ',
-            _ => raw, // uniform valid scalar
-        })
+        (produce::<u8>(), produce::<char>(), produce::<u8>()).map_gen(
+            |(sel, raw, byte): (u8, char, u8)| {
+                let ascii_end = 4 + ASCII_CHAR_EDGES.len();
+                let wide_end = ascii_end + NON_ASCII_CHAR_EDGES.len();
+                match sel as usize % 48 {
+                    0 | 1 => '\u{0}',
+                    2 | 3 => char::MAX,
+                    s if s < ascii_end => ASCII_CHAR_EDGES[s - 4],
+                    s if s < wide_end => NON_ASCII_CHAR_EDGES[s - ascii_end],
+                    s if s < wide_end + 8 => char::from(byte & 0x7f),
+                    _ => raw,
+                }
+            },
+        )
     }
 }
 impl VcheckGen for f32 {
@@ -153,7 +154,31 @@ impl VcheckGen for String {
     // UTF-8 specs (`str::is_ascii`, `is_char_boundary`, ...) exercise their
     // real logic instead of degenerating to the ASCII-only case.
     fn vcheck_gen() -> impl ValueGenerator<Output = Self> {
-        <Vec<char> as VcheckGen>::vcheck_gen().map_gen(|v: Vec<char>| v.into_iter().collect::<String>())
+        let ascii = produce::<Vec<u8>>()
+            .with()
+            .len(0usize..=DEFAULT_COLLECTION_MAX)
+            .values(0u8..=0x7f);
+        (
+            produce::<u8>(),
+            <Vec<char> as VcheckGen>::vcheck_gen(),
+            ascii,
+            produce::<u8>(),
+            produce::<usize>(),
+        )
+            .map_gen(
+                |(sel, mixed, ascii, pick, pos): (u8, Vec<char>, Vec<u8>, u8, usize)| {
+                    let ascii: Vec<char> = ascii.into_iter().map(char::from).collect();
+                    match sel % 8 {
+                        0 => String::new(),
+                        1 | 2 => ascii.into_iter().collect(),
+                        3 | 4 => {
+                            let wide = NON_ASCII_CHAR_EDGES[pick as usize % NON_ASCII_CHAR_EDGES.len()];
+                            crate::inject_char(ascii, wide, pos)
+                        }
+                        _ => mixed.into_iter().collect(),
+                    }
+                },
+            )
     }
 }
 
@@ -188,25 +213,19 @@ impl<T: VcheckGen + TypeGenerator> VcheckGen for Vec<T> {
         // the ordinary small vec and one of the boundary lengths, so a
         // pair of independently drawn ZST vecs frequently crosses
         // usize::MAX combined length.
-        (produce::<u8>(), base).map_gen(|(selector, small): (u8, Vec<T>)| {
-            if std::mem::size_of::<T>() != 0 || std::mem::needs_drop::<T>() || small.is_empty() {
+        (produce::<u8>(), base).map_gen(|(selector, mut small): (u8, Vec<T>)| {
+            if !crate::is_zst_no_drop::<T>() {
                 return small;
             }
-            let boundary = [
-                usize::MAX,
-                usize::MAX - 1,
-                usize::MAX / 2 + 1,
-                crate::DEFAULT_COLLECTION_MAX + 1,
-            ];
-            match selector % 8 {
-                s if (s as usize) < boundary.len() => {
-                    let mut out = small;
-                    // Safety: zero-sized, drop-free T with existing
-                    // witnesses; ZST Vec capacity is usize::MAX.
-                    unsafe { out.set_len(boundary[s as usize]) };
-                    out
+            let Some(witness) = small.pop() else {
+                return small;
+            };
+            match ZST_BOUNDARY_LENS.get(selector as usize % (2 * ZST_BOUNDARY_LENS.len())) {
+                Some(&len) => crate::zst_vec_with_len(witness, len),
+                None => {
+                    small.push(witness);
+                    small
                 }
-                _ => small,
             }
         })
     }
@@ -311,6 +330,129 @@ where
             .values(T::vcheck_gen())
     }
 }
+
+/// Mirror of [`crate::range_endpoint_strategy`].
+pub fn range_endpoint_gen<T: VcheckGen + VcheckRangeIdx>() -> impl ValueGenerator<Output = T> {
+    (produce::<u8>(), T::vcheck_gen(), 0usize..=STR_INDEX_WINDOW).map_gen(
+        |(sel, edge, offset): (u8, T, usize)| {
+            let window = match sel % 13 {
+                0..=7 => T::vcheck_slice_offset(offset % (SLICE_INDEX_WINDOW + 1)),
+                8 | 9 => T::vcheck_slice_offset(offset),
+                _ => None,
+            };
+            window.unwrap_or(edge)
+        },
+    )
+}
+
+impl<T: VcheckGen + VcheckRangeIdx> VcheckGen for Range<T> {
+    fn vcheck_gen() -> impl ValueGenerator<Output = Self> {
+        (produce::<u8>(), range_endpoint_gen::<T>(), range_endpoint_gen::<T>()).map_gen(
+            |(sel, a, b): (u8, T, T)| match sel % 8 {
+                0..=2 if a <= b => a..b,
+                0..=2 => b..a,
+                3..=5 => a..b,
+                6 => a.clone()..a,
+                _ => match a.vcheck_succ() {
+                    Some(next) => a..next,
+                    None => a.clone()..a,
+                },
+            },
+        )
+    }
+}
+
+impl<T: VcheckGen + VcheckRangeIdx> VcheckGen for RangeInclusive<T> {
+    fn vcheck_gen() -> impl ValueGenerator<Output = Self> {
+        (produce::<u8>(), range_endpoint_gen::<T>(), range_endpoint_gen::<T>()).map_gen(
+            |(sel, a, b): (u8, T, T)| match sel % 8 {
+                0..=2 if a <= b => a..=b,
+                0..=2 => b..=a,
+                3..=5 => a..=b,
+                6 => a.clone()..=a,
+                _ => T::vcheck_exhausted(a),
+            },
+        )
+    }
+}
+
+impl<T: VcheckGen + VcheckRangeIdx> VcheckGen for RangeFrom<T> {
+    fn vcheck_gen() -> impl ValueGenerator<Output = Self> {
+        range_endpoint_gen::<T>().map_gen(|a: T| a..)
+    }
+}
+
+impl<T: VcheckGen + VcheckRangeIdx> VcheckGen for RangeTo<T> {
+    fn vcheck_gen() -> impl ValueGenerator<Output = Self> {
+        range_endpoint_gen::<T>().map_gen(|b: T| ..b)
+    }
+}
+
+impl<T: VcheckGen + VcheckRangeIdx> VcheckGen for RangeToInclusive<T> {
+    fn vcheck_gen() -> impl ValueGenerator<Output = Self> {
+        range_endpoint_gen::<T>().map_gen(|b: T| ..=b)
+    }
+}
+
+impl VcheckGen for RangeFull {
+    fn vcheck_gen() -> impl ValueGenerator<Output = Self> {
+        bolero_generator::constant(..)
+    }
+}
+
+impl VcheckGen for Ordering {
+    fn vcheck_gen() -> impl ValueGenerator<Output = Self> {
+        produce::<u8>().map_gen(|sel: u8| crate::ORDERINGS[sel as usize % 3])
+    }
+}
+
+macro_rules! impl_nonzero_unsigned_gen {
+    ($($t:ty),* $(,)?) => {
+        $(
+            impl VcheckGen for NonZero<$t> {
+                fn vcheck_gen() -> impl ValueGenerator<Output = Self> {
+                    (produce::<u8>(), produce::<$t>()).map_gen(|(sel, raw): (u8, $t)| {
+                        let v = match sel % 24 {
+                            0 | 1 => 1 as $t,
+                            2 | 3 => 2 as $t,
+                            4 | 5 => <$t>::MAX,
+                            6 | 7 => <$t>::MAX - 1,
+                            8 | 9 => (1 as $t) << (<$t>::BITS - 1),
+                            _ => raw,
+                        };
+                        NonZero::new(v).unwrap_or(NonZero::<$t>::MIN)
+                    })
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! impl_nonzero_signed_gen {
+    ($($t:ty),* $(,)?) => {
+        $(
+            impl VcheckGen for NonZero<$t> {
+                fn vcheck_gen() -> impl ValueGenerator<Output = Self> {
+                    (produce::<u8>(), produce::<$t>()).map_gen(|(sel, raw): (u8, $t)| {
+                        let v = match sel % 30 {
+                            0..=3 => <$t>::MIN,
+                            4 | 5 => <$t>::MAX,
+                            6 | 7 => 1 as $t,
+                            8..=11 => -1 as $t,
+                            12 | 13 => <$t>::MIN + 1,
+                            14 | 15 => <$t>::MAX - 1,
+                            _ => raw,
+                        };
+                        NonZero::new(v).unwrap_or(NonZero::<$t>::MIN)
+                    })
+                }
+            }
+        )*
+    };
+}
+
+impl_nonzero_unsigned_gen!(u8, u16, u32, u64, u128, usize);
+impl_nonzero_signed_gen!(i8, i16, i32, i64, i128, isize);
 
 // ---------------------------------------------------------------------------
 // ExecMultiset<T> inner-shape helper. The bolero mirror of
@@ -605,5 +747,69 @@ mod tests {
         for s in seeds().take(200) {
             assert_eq!(sample(&via_fn, s), sample(&via_trait, s));
         }
+    }
+
+    fn entropy(seed: u64) -> Vec<u8> {
+        let mut state = seed;
+        (0..32)
+            .flat_map(|_| {
+                state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+                let mut z = state;
+                z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+                z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+                (z ^ (z >> 31)).to_le_bytes()
+            })
+            .collect()
+    }
+
+    fn draws<T: VcheckGen>(n: u64) -> Vec<T> {
+        let g = vcheck_gen::<T>();
+        (0..n)
+            .filter_map(|seed| {
+                let bytes = entropy(seed);
+                let mut d = ByteSliceDriver::new(&bytes, &Default::default());
+                g.generate(&mut d)
+            })
+            .collect()
+    }
+
+    #[test]
+    fn char_and_string_hit_edges() {
+        let chars = draws::<char>(4000);
+        for c in ASCII_CHAR_EDGES.iter().chain(NON_ASCII_CHAR_EDGES.iter()) {
+            assert!(chars.contains(c), "edge {:?} never generated", c);
+        }
+        let strings = draws::<String>(2000);
+        assert!(strings.iter().any(|s| !s.is_empty() && s.is_ascii()));
+        assert!(strings.iter().any(|s| {
+            s.chars().filter(|c| !c.is_ascii()).count() == 1 && s.chars().count() > 1
+        }));
+    }
+
+    #[test]
+    fn zst_vec_reaches_every_boundary_len() {
+        let lens: Vec<usize> = draws::<Vec<()>>(4000).iter().map(Vec::len).collect();
+        for want in ZST_BOUNDARY_LENS {
+            assert!(lens.contains(&want), "boundary len {want} never generated");
+        }
+    }
+
+    #[test]
+    fn ranges_cover_slice_index_shapes_and_exhaustion() {
+        let ranges = draws::<Range<usize>>(4000);
+        let slice = [0u8; DEFAULT_COLLECTION_MAX];
+        let hits = ranges.iter().filter(|r| slice.get((*r).clone()).is_some()).count();
+        assert!(hits * 4 > ranges.len(), "only {hits} in-bounds ranges");
+        assert!(ranges.iter().any(|r| r.start > r.end));
+        let inclusive = draws::<RangeInclusive<usize>>(4000);
+        assert!(inclusive.iter().any(|r| r.is_empty() && r.start() == r.end()));
+    }
+
+    #[test]
+    fn ordering_and_nonzero_generate_edges() {
+        let seen: HashSet<Ordering> = draws::<Ordering>(200).into_iter().collect();
+        assert_eq!(seen, HashSet::from(crate::ORDERINGS));
+        let values: Vec<i32> = draws::<NonZero<i32>>(4000).iter().map(|n| n.get()).collect();
+        assert!(values.contains(&i32::MIN) && values.contains(&-1));
     }
 }

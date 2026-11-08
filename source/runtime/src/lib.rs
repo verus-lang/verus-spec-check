@@ -10,12 +10,16 @@
 //!
 //! This crate is intentionally minimal, and should only depend on vcheck crates.
 
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
+use std::num::NonZero;
+use std::ops::{Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive};
 
 use proptest::collection::{hash_map, hash_set, vec};
-use proptest::prelude::any;
+use proptest::prelude::{any, Just};
+use proptest::sample::select;
 use proptest::strategy::{BoxedStrategy, Strategy};
 
 // ---------------------------------------------------------------------------
@@ -224,7 +228,7 @@ macro_rules! impl_signed_with_edges {
 impl_int_with_edges!(u8, u16, u32, u64, u128, usize);
 impl_signed_with_edges!(i8, i16, i32, i64, i128, isize);
 
-// `bool` and `char` keep their plain `any::<T>()` strategy
+// `bool` keeps its plain `any::<bool>()` strategy
 impl VcheckStrategy for bool {
     type Strategy = BoxedStrategy<bool>;
     fn vcheck_strategy() -> Self::Strategy {
@@ -232,10 +236,48 @@ impl VcheckStrategy for bool {
     }
 }
 
+/// ASCII chars with special handling in text specs.
+pub const ASCII_CHAR_EDGES: [char; 4] = ['\u{0}', '\t', ' ', '\u{7f}'];
+
+/// Non-ASCII UTF-8 width, surrogate, and whitespace boundaries.
+pub const NON_ASCII_CHAR_EDGES: [char; 15] = [
+    '\u{80}',
+    '\u{85}',
+    '\u{a0}',
+    '\u{7ff}',
+    '\u{800}',
+    '\u{200b}',
+    '\u{2028}',
+    '\u{3000}',
+    '\u{d7ff}',
+    '\u{e000}',
+    '\u{fffd}',
+    '\u{feff}',
+    '\u{ffff}',
+    '\u{10000}',
+    char::MAX,
+];
+
+fn ascii_char() -> BoxedStrategy<char> {
+    proptest::prop_oneof![
+        3 => (0x20u8..=0x7e).prop_map(char::from),
+        1 => (0u8..=0x7f).prop_map(char::from),
+    ]
+    .boxed()
+}
+
 impl VcheckStrategy for char {
     type Strategy = BoxedStrategy<char>;
     fn vcheck_strategy() -> Self::Strategy {
-        any::<char>().boxed()
+        proptest::prop_oneof![
+            2 => Just('\u{0}'),
+            2 => Just(char::MAX),
+            3 => select(&ASCII_CHAR_EDGES[..]),
+            8 => select(&NON_ASCII_CHAR_EDGES[..]),
+            5 => ascii_char(),
+            8 => any::<char>(),
+        ]
+        .boxed()
     }
 }
 
@@ -320,11 +362,16 @@ impl<C: VcheckSeqSampleFmt> Debug for VcheckSeqSample<C> {
 /// overflow class in `append`-style growth specs whose ensures have no
 /// combined-length `requires`. Random sampling can never coordinate
 /// these values; they must be seeded, like the scalar MIN/-1 seeds.
-const ZST_BOUNDARY_LENS: [usize; 4] = [
-    usize::MAX,
-    usize::MAX - 1,
-    usize::MAX / 2 + 1,
+pub(crate) const ZST_BOUNDARY_LENS: [usize; 7] = [
     DEFAULT_COLLECTION_MAX + 1,
+    // u32 truncation boundary
+    u32::MAX as usize,
+    (u32::MAX as usize).saturating_add(1),
+    // isize::MAX boundary, exact usize::MAX pair sum
+    isize::MAX as usize,
+    isize::MAX as usize + 1,
+    usize::MAX - 1,
+    usize::MAX,
 ];
 
 /// True when `T` is a zero-sized, drop-free type — the class for which
@@ -334,7 +381,7 @@ const ZST_BOUNDARY_LENS: [usize; 4] = [
 /// and view materialization on a `usize::MAX`-length container would
 /// otherwise loop 2^64 times in a debug build).
 #[inline]
-fn is_zst_no_drop<T>() -> bool {
+pub(crate) fn is_zst_no_drop<T>() -> bool {
     std::mem::size_of::<T>() == 0 && !std::mem::needs_drop::<T>()
 }
 
@@ -344,7 +391,7 @@ fn is_zst_no_drop<T>() -> bool {
 /// `T`, `Vec::new()` has capacity `usize::MAX` and elements occupy no
 /// storage, so `set_len(len)` exposes `len` copies of the
 /// (bit-identical, drop-free) witness the strategy already produced.
-fn zst_vec_with_len<T>(_witness: T, len: usize) -> Vec<T> {
+pub(crate) fn zst_vec_with_len<T>(_witness: T, len: usize) -> Vec<T> {
     debug_assert!(is_zst_no_drop::<T>());
     let mut out = Vec::new();
     unsafe { out.set_len(len) };
@@ -363,8 +410,8 @@ where
         // length-boundary vecs (see ZST_BOUNDARY_LENS). Weighted toward
         // the boundary: a pair of drawn containers should frequently
         // have a combined length crossing usize::MAX.
-        if std::mem::size_of::<T>() == 0 && !std::mem::needs_drop::<T>() {
-            let boundary = (T::vcheck_strategy(), proptest::sample::select(&ZST_BOUNDARY_LENS[..]))
+        if is_zst_no_drop::<T>() {
+            let boundary = (T::vcheck_strategy(), select(&ZST_BOUNDARY_LENS[..]))
                 .prop_map(|(witness, len)| zst_vec_with_len(witness, len))
                 .boxed();
             return proptest::prop_oneof![1 => small, 1 => boundary].boxed();
@@ -496,10 +543,261 @@ where
     }
 }
 
+fn string_of(chars: BoxedStrategy<char>, min_len: usize) -> BoxedStrategy<String> {
+    vec(chars, min_len..=DEFAULT_COLLECTION_MAX)
+        .prop_map(|v| v.into_iter().collect::<String>())
+        .boxed()
+}
+
+/// Insert `c` into `chars` at `pos` modulo the insertion slots.
+pub(crate) fn inject_char(mut chars: Vec<char>, c: char, pos: usize) -> String {
+    let at = pos % (chars.len() + 1);
+    chars.insert(at, c);
+    chars.into_iter().collect()
+}
+
 impl VcheckStrategy for String {
     type Strategy = BoxedStrategy<String>;
     fn vcheck_strategy() -> Self::Strategy {
-        any::<String>().boxed()
+        let one_wide = (
+            vec(ascii_char(), 0..=DEFAULT_COLLECTION_MAX),
+            select(&NON_ASCII_CHAR_EDGES[..]),
+            any::<usize>(),
+        )
+            .prop_map(|(ascii, c, pos)| inject_char(ascii, c, pos));
+        proptest::prop_oneof![
+            1 => Just(String::new()),
+            3 => string_of(ascii_char(), 1),
+            2 => one_wide,
+            4 => string_of(char::vcheck_strategy(), 1),
+            2 => string_of(select(&NON_ASCII_CHAR_EDGES[..]).boxed(), 1),
+            1 => any::<String>(),
+        ]
+        .boxed()
+    }
+}
+
+/// Upper end of the sampled slice lengths.
+pub const SLICE_INDEX_WINDOW: usize = DEFAULT_COLLECTION_MAX + 1;
+
+/// Upper end of the sampled UTF-8 byte lengths.
+pub const STR_INDEX_WINDOW: usize = 4 * DEFAULT_COLLECTION_MAX + 1;
+
+/// Endpoint types for the `Range*` strategies.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` is not a supported range endpoint type",
+    label = "no `VcheckRangeIdx` for `{Self}`",
+    note = "range strategies are provided for the integer primitives and `char`"
+)]
+pub trait VcheckRangeIdx: VcheckStrategy + Clone + PartialOrd + Debug + 'static {
+    /// Next value in `Step` order.
+    fn vcheck_succ(&self) -> Option<Self>;
+    /// An iterator-exhausted `at..=at`.
+    fn vcheck_exhausted(at: Self) -> RangeInclusive<Self>;
+    /// The endpoint at a slice or str offset, for `SliceIndex` endpoint types.
+    fn vcheck_slice_offset(_offset: usize) -> Option<Self> {
+        None
+    }
+}
+
+macro_rules! impl_range_idx {
+    ($($t:ty $({ $($extra:tt)* })?),* $(,)?) => {
+        $(
+            impl VcheckRangeIdx for $t {
+                fn vcheck_succ(&self) -> Option<Self> {
+                    (*self..=<$t>::MAX).nth(1)
+                }
+                fn vcheck_exhausted(at: Self) -> RangeInclusive<Self> {
+                    let mut r = at..=at;
+                    let _ = r.next();
+                    r
+                }
+                $($($extra)*)?
+            }
+        )*
+    };
+}
+
+impl_range_idx!(
+    u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, isize, char,
+    usize {
+        fn vcheck_slice_offset(offset: usize) -> Option<Self> {
+            Some(offset)
+        }
+    },
+);
+
+/// Range endpoint strategy, window-biased for `SliceIndex` endpoints.
+pub fn range_endpoint_strategy<T: VcheckRangeIdx>() -> BoxedStrategy<T>
+where
+    <T as VcheckStrategy>::Strategy: 'static,
+{
+    let edges = T::vcheck_strategy().boxed();
+    if T::vcheck_slice_offset(0).is_none() {
+        return edges;
+    }
+    proptest::prop_oneof![
+        8 => (0..=SLICE_INDEX_WINDOW).prop_filter_map("slice offset", T::vcheck_slice_offset),
+        2 => (0..=STR_INDEX_WINDOW).prop_filter_map("str offset", T::vcheck_slice_offset),
+        3 => edges,
+    ]
+    .boxed()
+}
+
+fn endpoint_pair<T: VcheckRangeIdx>() -> BoxedStrategy<(T, T)>
+where
+    <T as VcheckStrategy>::Strategy: 'static,
+{
+    (range_endpoint_strategy::<T>(), range_endpoint_strategy::<T>()).boxed()
+}
+
+impl<T: VcheckRangeIdx> VcheckStrategy for Range<T>
+where
+    <T as VcheckStrategy>::Strategy: 'static,
+{
+    type Strategy = BoxedStrategy<Range<T>>;
+    fn vcheck_strategy() -> Self::Strategy {
+        proptest::prop_oneof![
+            3 => endpoint_pair::<T>().prop_map(|(a, b)| if a <= b { a..b } else { b..a }),
+            3 => endpoint_pair::<T>().prop_map(|(a, b)| a..b),
+            1 => range_endpoint_strategy::<T>().prop_map(|a| a.clone()..a),
+            1 => range_endpoint_strategy::<T>().prop_map(|a| match a.vcheck_succ() {
+                Some(b) => a..b,
+                None => a.clone()..a,
+            }),
+        ]
+        .boxed()
+    }
+}
+
+impl<T: VcheckRangeIdx> VcheckStrategy for RangeInclusive<T>
+where
+    <T as VcheckStrategy>::Strategy: 'static,
+{
+    type Strategy = BoxedStrategy<RangeInclusive<T>>;
+    fn vcheck_strategy() -> Self::Strategy {
+        proptest::prop_oneof![
+            3 => endpoint_pair::<T>().prop_map(|(a, b)| if a <= b { a..=b } else { b..=a }),
+            3 => endpoint_pair::<T>().prop_map(|(a, b)| a..=b),
+            1 => range_endpoint_strategy::<T>().prop_map(|a| a.clone()..=a),
+            1 => range_endpoint_strategy::<T>().prop_map(T::vcheck_exhausted),
+        ]
+        .boxed()
+    }
+}
+
+impl<T: VcheckRangeIdx> VcheckStrategy for RangeFrom<T>
+where
+    <T as VcheckStrategy>::Strategy: 'static,
+{
+    type Strategy = BoxedStrategy<RangeFrom<T>>;
+    fn vcheck_strategy() -> Self::Strategy {
+        range_endpoint_strategy::<T>().prop_map(|a| a..).boxed()
+    }
+}
+
+impl<T: VcheckRangeIdx> VcheckStrategy for RangeTo<T>
+where
+    <T as VcheckStrategy>::Strategy: 'static,
+{
+    type Strategy = BoxedStrategy<RangeTo<T>>;
+    fn vcheck_strategy() -> Self::Strategy {
+        range_endpoint_strategy::<T>().prop_map(|b| ..b).boxed()
+    }
+}
+
+impl<T: VcheckRangeIdx> VcheckStrategy for RangeToInclusive<T>
+where
+    <T as VcheckStrategy>::Strategy: 'static,
+{
+    type Strategy = BoxedStrategy<RangeToInclusive<T>>;
+    fn vcheck_strategy() -> Self::Strategy {
+        range_endpoint_strategy::<T>().prop_map(|b| ..=b).boxed()
+    }
+}
+
+impl VcheckStrategy for RangeFull {
+    type Strategy = BoxedStrategy<RangeFull>;
+    fn vcheck_strategy() -> Self::Strategy {
+        Just(..).boxed()
+    }
+}
+
+/// All `Ordering` variants.
+pub const ORDERINGS: [Ordering; 3] = [Ordering::Less, Ordering::Equal, Ordering::Greater];
+
+impl VcheckStrategy for Ordering {
+    type Strategy = BoxedStrategy<Ordering>;
+    fn vcheck_strategy() -> Self::Strategy {
+        select(&ORDERINGS[..]).boxed()
+    }
+}
+
+macro_rules! impl_nonzero_unsigned {
+    ($($t:ty),* $(,)?) => {
+        $(
+            impl VcheckStrategy for NonZero<$t> {
+                type Strategy = BoxedStrategy<NonZero<$t>>;
+                fn vcheck_strategy() -> Self::Strategy {
+                    proptest::prop_oneof![
+                        2 => Just(1 as $t),
+                        2 => Just(2 as $t),
+                        2 => Just(<$t>::MAX),
+                        2 => Just(<$t>::MAX - 1),
+                        2 => Just((1 as $t) << (<$t>::BITS - 1)),
+                        14 => 1..=<$t>::MAX,
+                    ]
+                    .prop_filter_map("nonzero", NonZero::<$t>::new)
+                    .boxed()
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! impl_nonzero_signed {
+    ($($t:ty),* $(,)?) => {
+        $(
+            impl VcheckStrategy for NonZero<$t> {
+                type Strategy = BoxedStrategy<NonZero<$t>>;
+                fn vcheck_strategy() -> Self::Strategy {
+                    proptest::prop_oneof![
+                        4 => Just(<$t>::MIN),
+                        2 => Just(<$t>::MAX),
+                        2 => Just(1 as $t),
+                        4 => Just(-1 as $t),
+                        2 => Just(<$t>::MIN + 1),
+                        2 => Just(<$t>::MAX - 1),
+                        12 => any::<$t>(),
+                    ]
+                    .prop_filter_map("nonzero", NonZero::<$t>::new)
+                    .boxed()
+                }
+            }
+        )*
+    };
+}
+
+impl_nonzero_unsigned!(u8, u16, u32, u64, u128, usize);
+impl_nonzero_signed!(i8, i16, i32, i64, i128, isize);
+
+/// Runtime mirror of vstd's `RangeInclusiveView`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VcheckRangeInclusiveView<Idx> {
+    pub start: Idx,
+    pub end: Idx,
+    pub exhausted: bool,
+}
+
+// exact for `Step` endpoints
+#[doc(hidden)]
+pub fn __vcheck_range_inclusive_view<Idx: Clone + PartialOrd>(
+    r: &RangeInclusive<Idx>,
+) -> VcheckRangeInclusiveView<Idx> {
+    VcheckRangeInclusiveView {
+        start: r.start().clone(),
+        end: r.end().clone(),
+        exhausted: r.is_empty() && r.start() <= r.end(),
     }
 }
 
@@ -993,5 +1291,110 @@ mod zst_strategy_tests {
         assert!(!printed.is_empty());
         // Non-ZST output stays byte-identical to Vec's own Debug.
         assert_eq!(format!("{:?}", VcheckSeqSample(vec![1u8, 2, 3])), "[1, 2, 3]");
+    }
+}
+
+#[cfg(test)]
+mod std_strategy_tests {
+    use super::*;
+    use proptest::strategy::ValueTree;
+    use proptest::test_runner::TestRunner;
+
+    fn sample<T: VcheckStrategy>(n: usize) -> Vec<T> {
+        let mut runner = TestRunner::deterministic();
+        let strategy = T::vcheck_strategy();
+        (0..n)
+            .map(|_| strategy.new_tree(&mut runner).unwrap().current())
+            .collect()
+    }
+
+    #[test]
+    fn zst_vec_strategy_reaches_every_boundary() {
+        let lens: Vec<usize> = sample::<Vec<()>>(512).iter().map(Vec::len).collect();
+        for want in ZST_BOUNDARY_LENS {
+            assert!(lens.contains(&want), "boundary len {want} never sampled");
+        }
+    }
+
+    #[test]
+    fn zst_exact_max_pair_does_not_overflow() {
+        let mut a = zst_vec_with_len((), isize::MAX as usize);
+        let mut b = zst_vec_with_len((), isize::MAX as usize + 1);
+        a.append(&mut b);
+        assert_eq!(a.len(), usize::MAX);
+    }
+
+    #[test]
+    fn char_hits_every_edge_and_utf8_width() {
+        let chars = sample::<char>(4096);
+        for c in ASCII_CHAR_EDGES.iter().chain(NON_ASCII_CHAR_EDGES.iter()) {
+            assert!(chars.contains(c), "edge {:?} never sampled", c);
+        }
+        for width in 1..=4 {
+            assert!(chars.iter().any(|c| c.len_utf8() == width), "no {width}-byte char");
+        }
+    }
+
+    #[test]
+    fn string_covers_empty_ascii_single_non_ascii_and_nul() {
+        let strings = sample::<String>(2048);
+        assert!(strings.iter().any(String::is_empty));
+        assert!(strings.iter().any(|s| !s.is_empty() && s.is_ascii()));
+        assert!(strings.iter().any(|s| {
+            s.chars().filter(|c| !c.is_ascii()).count() == 1 && s.chars().count() > 1
+        }));
+        assert!(strings.iter().any(|s| s.contains('\u{0}')));
+        assert!(strings.iter().any(|s| s.contains(char::MAX)));
+    }
+
+    #[test]
+    fn range_idx_helpers_follow_step_order() {
+        assert_eq!(u8::MAX.vcheck_succ(), None);
+        assert_eq!('\u{d7ff}'.vcheck_succ(), Some('\u{e000}'));
+        let r = u8::vcheck_exhausted(7);
+        assert!(r.is_empty() && *r.start() == 7 && *r.end() == 7);
+    }
+
+    #[test]
+    fn range_usize_covers_slice_index_shapes() {
+        let ranges = sample::<Range<usize>>(1024);
+        assert!(ranges.iter().any(|r| r.start == r.end));
+        assert!(ranges.iter().any(|r| r.start > r.end));
+        assert!(ranges.iter().any(|r| r.end == usize::MAX));
+        let slice = [0u8; DEFAULT_COLLECTION_MAX];
+        let hits = ranges.iter().filter(|r| slice.get((*r).clone()).is_some()).count();
+        assert!(hits * 4 > ranges.len(), "only {hits} in-bounds ranges");
+    }
+
+    #[test]
+    fn range_inclusive_covers_exhausted() {
+        let ranges = sample::<RangeInclusive<usize>>(1024);
+        assert!(ranges.iter().any(|r| r.is_empty() && r.start() == r.end()));
+        assert!(ranges.iter().any(|r| !r.is_empty() && r.start() == r.end()));
+    }
+
+    #[test]
+    fn ordering_covers_all_variants() {
+        let orderings: HashSet<Ordering> = sample::<Ordering>(128).into_iter().collect();
+        assert_eq!(orderings, HashSet::from(ORDERINGS));
+    }
+
+    #[test]
+    fn nonzero_hits_edges() {
+        let unsigned: Vec<u32> = sample::<NonZero<u32>>(512).iter().map(|n| n.get()).collect();
+        for want in [1, u32::MAX, 1 << 31] {
+            assert!(unsigned.contains(&want), "NonZero<u32> never sampled {want}");
+        }
+        let signed: Vec<i64> = sample::<NonZero<i64>>(512).iter().map(|n| n.get()).collect();
+        assert!(signed.contains(&i64::MIN) && signed.contains(&-1));
+    }
+
+    #[test]
+    fn range_inclusive_view_tracks_exhaustion() {
+        assert!(!__vcheck_range_inclusive_view(&(2u8..=5)).exhausted);
+        assert!(!__vcheck_range_inclusive_view(&(5u8..=2)).exhausted);
+        let mut drained = 4u8..=4;
+        let _ = drained.next();
+        assert!(__vcheck_range_inclusive_view(&drained).exhausted);
     }
 }

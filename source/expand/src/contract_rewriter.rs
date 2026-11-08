@@ -24,6 +24,16 @@ pub enum MapSetKind {
     Set,
 }
 
+fn peel_paren_deref(mut cur: &Expr) -> &Expr {
+    loop {
+        match cur {
+            Expr::Paren(p) => cur = p.expr.as_ref(),
+            Expr::Unary(u) if matches!(u.op, UnOp::Deref(_)) => cur = u.expr.as_ref(),
+            _ => return cur,
+        }
+    }
+}
+
 pub struct ContractRewriter<'a> {
     pub spec_fn_names: &'a HashSet<String>,
     /// Per parameter: how `<param>.deep_view()` translates at the call site.
@@ -81,6 +91,31 @@ pub struct ContractRewriter<'a> {
 }
 
 impl<'a> ContractRewriter<'a> {
+    /// The std value kind of a `ret->Some_0` / `ret->Ok_0` / `ret->Err_0` projection.
+    fn std_value_return_projection(&self, e: &Expr) -> Option<StdValueKind> {
+        let ret_ident = self.return_ident.as_ref()?;
+        let Expr::GetField(egf) = peel_paren_deref(e) else {
+            return None;
+        };
+        if !expr_is_ident(peel_paren_deref(&egf.base), ret_ident) {
+            return None;
+        }
+        let member = match &egf.member {
+            verus_syn::Member::Named(id) => id.to_string(),
+            verus_syn::Member::Unnamed(idx) => idx.index.to_string(),
+        };
+        let elem = match (member.as_str(), &self.return_shape) {
+            ("Some_0", ReturnShape::OwnedOption(elem)) => elem,
+            ("Ok_0", ReturnShape::OwnedResult(elem, _)) => elem,
+            ("Err_0", ReturnShape::OwnedResult(_, elem)) => elem,
+            _ => return None,
+        };
+        let ParamElem::Primitive(ty) = elem else {
+            return None;
+        };
+        std_value_kind(ty, &HashSet::new())
+    }
+
     /// If `e` (a method-call receiver) resolves to a map/set-shaped ident —
     /// through the already-lowered `@` view (`&<id>`), an `old()` snapshot
     /// (`&__vcheck_pre_<id>`), or a bare ident — return its kind. Peels a
@@ -326,6 +361,12 @@ impl<'a> VisitMut for ContractRewriter<'a> {
         if let Expr::Final(f) = expr {
             let inner = (*f.arg).clone();
             *expr = inner;
+        }
+        // `ret->Some_0@` over a std-valued element
+        if let Expr::View(v) = expr {
+            if let Some(kind) = self.std_value_return_projection(&v.expr) {
+                *expr = kind.view_form_expr(&v.expr);
+            }
         }
         // `(*old(<id>)).remaining().unref()` — vstd 2026-06-14's
         // `IteratorSpec` idiom for the not-yet-yielded elements of a `&mut`
@@ -2788,4 +2829,64 @@ fn old_call_ident_through_wrappers(expr: &Expr) -> Option<String> {
         }
     }
     None
+}
+
+#[cfg(test)]
+mod std_value_projection_tests {
+    use super::*;
+    use std::collections::{HashMap, HashSet};
+    use verus_syn::visit_mut::VisitMut;
+
+    fn rewrite_with_return(expr: Expr, return_shape: ReturnShape) -> String {
+        let spec_fn_names: HashSet<String> = HashSet::new();
+        let param_call_form: HashMap<String, TokenStream2> = HashMap::new();
+        let pre_view_for: HashMap<String, TokenStream2> = HashMap::new();
+        let user_typed_idents: HashMap<String, Ident> = HashMap::new();
+        let auto_borrow_idents: HashMap<String, TokenStream2> = HashMap::new();
+        let when_used_as_spec_redirect: HashMap<String, String> = HashMap::new();
+        let map_set_shaped_idents: HashMap<String, MapSetKind> = HashMap::new();
+        let sampled_pred_idents: HashSet<String> = HashSet::new();
+        let mut rw = ContractRewriter {
+            spec_fn_names: &spec_fn_names,
+            param_call_form: &param_call_form,
+            pre_view_for: &pre_view_for,
+            user_typed_idents: &user_typed_idents,
+            auto_borrow_idents: &auto_borrow_idents,
+            when_used_as_spec_redirect: &when_used_as_spec_redirect,
+            map_set_shaped_idents: &map_set_shaped_idents,
+            sampled_pred_idents: &sampled_pred_idents,
+            return_ident: Some(format_ident!("r")),
+            return_shape,
+            spec_int_idents: HashSet::new(),
+            spec_real_idents: HashSet::new(),
+            int_returning_provided: HashSet::new(),
+        };
+        let mut e = expr;
+        rw.visit_expr_mut(&mut e);
+        quote! { #e }.to_string().split_whitespace().collect::<Vec<_>>().join(" ")
+    }
+
+    fn prim(src: &str) -> ParamElem {
+        ParamElem::Primitive(verus_syn::parse_str(src).unwrap())
+    }
+
+    #[test]
+    fn option_nonzero_projection_view_calls_get() {
+        let out = rewrite_with_return(
+            verus_syn::parse_quote! { r->Some_0@ },
+            ReturnShape::OwnedOption(prim("core::num::NonZero<i32>")),
+        );
+        assert!(out.contains(". get ()"), "got: {out}");
+        assert!(out.contains("Some (__v) => __v"), "got: {out}");
+    }
+
+    #[test]
+    fn primitive_projection_view_is_unchanged() {
+        let out = rewrite_with_return(
+            verus_syn::parse_quote! { r->Some_0@ },
+            ReturnShape::OwnedOption(prim("u32")),
+        );
+        assert!(!out.contains("get ()"), "got: {out}");
+        assert!(!out.contains("__vcheck_range_inclusive_view"), "got: {out}");
+    }
 }
