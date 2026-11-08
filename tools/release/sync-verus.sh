@@ -164,6 +164,9 @@ fi
 if [ "$SKIP_FLAKE" -eq 0 ]; then
   echo
   bash tools/release/flake-bump.sh --version "$VERUS_VERSION"
+  VERUS_DATE="$VERUS_DATE" VERUS_VERSION="$VERUS_VERSION" perl -i -pe \
+    's/verus-\d{4}-\d{2}-\d{2}/verus-$ENV{VERUS_DATE}/g; s/0\.\d{4}\.\d{2}\.\d{2}\.[0-9a-f]+/$ENV{VERUS_VERSION}/g' \
+    README.md
 else
   echo "(--skip-flake: leaving flake.nix untouched)"
 fi

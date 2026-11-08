@@ -160,13 +160,16 @@ find "$OVERLAY/src" -name '*.orig' -delete
 #      a) build = "build.rs"        (wires VERUS_CONTRIB_HOOKS_FILE for the
 #                                    contrib-hooks provider; overlay-owned)
 #      b) ensure `contrib-hooks` feature exists (pre-seam upstreams lack it;
-#                                    hooks.rs is gated on this feature)
+#                                    hooks.rs is gated on this feature) and
+#                                    is a default feature, so patching in the
+#                                    overlay is enough to enable `#[vcheck]`
 #      c) append verus_spec_check_engine path-dep + standalone [workspace]
 {
   echo "# THIS FILE IS DERIVED from upstream verus_builtin_macros $VERSION's"
   echo "# manifest by tools/release/overlay-resync.sh. Do not edit by hand:"
   echo "# re-run the resync. Overlay delta: build.rs wiring, the"
-  echo "# contrib-hooks feature (if pre-seam), verus_spec_check_engine dep, [workspace]."
+  echo "# contrib-hooks feature (if pre-seam) as a default feature,"
+  echo "# verus_spec_check_engine dep, [workspace]."
   cat "$PRISTINE/Cargo.toml"
 } > "$OVERLAY/Cargo.toml"
 
@@ -184,6 +187,17 @@ if ! grep -qE '^contrib-hooks\s*=' "$OVERLAY/Cargo.toml"; then
   else
     printf '\n[features]\ncontrib-hooks = []\n' >> "$OVERLAY/Cargo.toml"
   fi
+fi
+if grep -qE '^default\s*=' "$OVERLAY/Cargo.toml"; then
+  if ! grep -qE '^default\s*=.*"contrib-hooks"' "$OVERLAY/Cargo.toml"; then
+    perl -i -pe 'if (/^default\s*=/) { s/\[\s*\]/["contrib-hooks"]/ or s/\[/["contrib-hooks", /; }' "$OVERLAY/Cargo.toml"
+  fi
+else
+  perl -i -pe 's/^(contrib-hooks\s*=.*)$/default = ["contrib-hooks"]\n$1/' "$OVERLAY/Cargo.toml"
+fi
+if ! grep -qE '^default\s*=.*"contrib-hooks"' "$OVERLAY/Cargo.toml"; then
+  echo "FATAL: could not make contrib-hooks a default feature of the derived manifest" >&2
+  exit 1
 fi
 
 # c) the engine dep and standalone-workspace marker.

@@ -20,7 +20,6 @@ vstd = "=@PIN@"
 # `::verus_spec_check::bolero` re-exports the emitted harness references.
 verus_spec_check = { path = "@ROOT@/source/verus_spec_check", features = ["bolero"] }
 verus_spec_check_vstd_ext = { path = "@ROOT@/source/vstd_ext" }
-verus_builtin_macros = { version = "=@PIN@", features = ["contrib-hooks"] }
 
 [package.metadata.verus]
 verify = true

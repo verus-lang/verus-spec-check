@@ -26,7 +26,7 @@ selected Verus binary's tag.
 
 | Workflow | Trigger | Does |
 |---|---|---|
-| `ci.yml` | push to `main` / PR / manual | **tiered.** push+manual: quick checks (overlay reproducibility, pin consistency, workspace build, unit tests, snippet-suite harness tier). PR: the above plus the heavy Verus work (fetch pinned Verus, snippet-suite verify tier, crates.io-only packaging path). Docs-only PRs skip the heavy tier |
+| `ci.yml` | push to `main` / PR / manual | **tiered.** push+manual: quick checks (overlay reproducibility, pin consistency, workspace build, unit tests, snippet-suite harness tier). PR: the above plus the heavy Verus work (fetch pinned Verus, snippet-suite verify tier, and `tools/check_git_install.sh`, which installs the PR commit as a git dependency the way the README describes). Docs-only PRs skip the heavy tier |
 | `update.yml` | Mon+Tue cron, manual | `sync-verus.sh latest` -> opens a PR for the newest Verus binary, independently retaining or updating the vstd line |
 | `release.yml` | manual, or push to `main` touching root `Cargo.toml` or `flake.nix` | if the Verus binary date isn't tagged yet, tag `verus-<date>`, move `latest`, create a GitHub release |
 | `backfill.yml` | manual (version input) | sync to an older same-date Verus/vstd line, validate, and tag `verus-<date>` |

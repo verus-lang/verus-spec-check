@@ -15,7 +15,6 @@ path = "src/lib.rs"
 vstd = "=@PIN@"
 verus_spec_check = { path = "@ROOT@/source/verus_spec_check" }
 verus_spec_check_vstd_ext = { path = "@ROOT@/source/vstd_ext" }
-verus_builtin_macros = { version = "=@PIN@", features = ["contrib-hooks"] }
 # The external-coverage subject: a plain (non-Verus) dependency crate.
 covext_dep = { path = "./covext_dep" }
 

@@ -77,29 +77,23 @@ jobs:
 
           ## Use it
 
-          Clone this tag, then point path deps at the checkout:
-
-          \`\`\`bash
-          git clone --branch $TAG --depth 1 \\
-            git@github.com:JakeGinesin/verus-spec-check ~/verus-spec-check
-          \`\`\`
-
           In your project's Cargo.toml:
 
           \`\`\`toml
           [dependencies]
           vstd = "=$VSTD"
-          verus_spec_check = { path = "~/verus-spec-check/source/verus_spec_check" }
-          verus_spec_check_vstd_ext = { path = "~/verus-spec-check/source/vstd_ext" }
-          verus_builtin_macros = { version = "=$VSTD", features = ["contrib-hooks"] }
+          verus_spec_check = { git = "https://github.com/${{ github.repository }}", tag = "$TAG" }
+          verus_spec_check_vstd_ext = { git = "https://github.com/${{ github.repository }}", tag = "$TAG" }
 
           [patch.crates-io]
-          verus_builtin_macros = { path = "~/verus-spec-check/source/builtin_macros_overlay" }
+          verus_builtin_macros = { git = "https://github.com/${{ github.repository }}", tag = "$TAG" }
           \`\`\`
+
+          Keep the \`=\` in the vstd requirement. Use Verus binary \`$VERUS\`;
+          \`nix develop\` in a checkout of this tag provides it.
 
           The tag date matches the Verus binary release. The vstd line may be
           older when that Verus release did not publish new crates.
-          \`nix develop ~/verus-spec-check\` provides the pinned Verus binary.
           EOF
           )
           gh release create "$TAG" --title "$TAG" --notes "$NOTES"

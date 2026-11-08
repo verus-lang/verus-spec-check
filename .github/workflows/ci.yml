@@ -155,3 +155,10 @@ jobs:
       - name: Verify tests
         if: github.event_name == 'pull_request' && steps.scope.outputs.heavy == 'true'
         run: nix develop --command cargo test -p verus_spec_check_test verify_
+
+      - name: Install from git, as the README describes
+        if: github.event_name == 'pull_request' && steps.scope.outputs.heavy == 'true'
+        run: |
+          git update-ref refs/heads/git-install-check HEAD
+          nix develop --command bash tools/check_git_install.sh --verify \
+            "file://$GITHUB_WORKSPACE" "$(git rev-parse HEAD)"

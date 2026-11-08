@@ -727,7 +727,6 @@ dependencies = [
 name = "verus_spec_check_mut"
 version = "0.1.0"
 dependencies = [
- "verus_builtin_macros",
  "verus_spec_check",
  "verus_spec_check_vstd_ext",
  "vstd",

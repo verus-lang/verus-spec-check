@@ -660,10 +660,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "verus_spec_check_assert"
+name = "verus_spec_check_assert_example"
 version = "0.1.0"
 dependencies = [
- "verus_builtin_macros",
  "verus_spec_check",
  "verus_spec_check_vstd_ext",
  "vstd",
@@ -675,7 +674,7 @@ version = "0.0.0-2026-11-01-0251"
 dependencies = [
  "proc-macro2",
  "quote",
- "verus_spec_check_assert 0.0.0-2026-11-01-0251",
+ "verus_spec_check_assert",
  "verus_spec_check_external_provide",
  "verus_spec_check_syntax",
  "verus_syn",
@@ -699,7 +698,7 @@ version = "0.0.0-2026-11-01-0251"
 dependencies = [
  "proc-macro2",
  "quote",
- "verus_spec_check_assert 0.0.0-2026-11-01-0251",
+ "verus_spec_check_assert",
  "verus_spec_check_attr",
  "verus_spec_check_external_provide",
  "verus_spec_check_instrument",
