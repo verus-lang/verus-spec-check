@@ -107,24 +107,18 @@ verus_spec_check_vstd_ext = { git = "https://github.com/verus-lang/verus-spec-ch
 [package.metadata.verus]
 verify = true
 
-# Substitutes the verus-spec-check overlay for the stock verus_builtin_macros,
-# which is what makes `verus!` process the #[vcheck] attribute.
+# substitutes the verus-spec-check overlay for the stock verus_builtin_macros,
+# which is what makes `verus!` process the #[vcheck] attribute
 [patch.crates-io]
 verus_builtin_macros = { git = "https://github.com/verus-lang/verus-spec-check", tag = "verus-2026-11-02" }
 ```
 
-Keep the `=` in the `vstd` requirement. Each release is built against exactly
-one vstd version, and a plain `"0.0.0-..."` requirement lets cargo select a
-newer vstd that conflicts with it (see USAGE.md, "Troubleshooting").
-
-The Verus binary must come from the same release: `0.2026.11.02.8bf68ee` for
+Keep the `=` in the `vstd` requirement, as each release is built against
+exactly one `vstd` version. The Verus binary must come from the same release, e.g.
+`0.2026.11.02.8bf68ee` for
 the tag above. Download it from the
 [Verus releases](https://github.com/verus-lang/verus/releases), or run
 `nix develop` in a checkout of the tag.
-
-To work against a local checkout instead, replace each `git = ..., tag = ...`
-with a `path`: `source/verus_spec_check`, `source/vstd_ext`, and
-`source/builtin_macros_overlay` inside the checkout.
 
 ## License
 

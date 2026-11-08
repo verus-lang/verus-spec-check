@@ -561,6 +561,11 @@ you can run `nix develop` on the main verus-spec-check directory,
 change directories into your main project, and run `cargo verus verify`
 there normally.
 
+### Checking out a local version of Verus SpecCheck
+To work against a local copy of Verus SpecCheck, replace each `git = ..., tag = ...`
+with a `path` for the `source/verus_spec_check`, `source/vstd_ext`, and
+`source/builtin_macros_overlay`.
+
 ## Hand-written wrappers
 
 Sometimes you may not be able to label your specification functions directly with
