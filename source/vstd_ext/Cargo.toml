@@ -17,9 +17,9 @@ path = "src/lib.rs"
 
 [dependencies]
 # Pulled from crates.io (registry) only
-vstd = "=0.0.0-2026-11-01-0251"
-verus_builtin_macros = "=0.0.0-2026-11-01-0251"
-verus_builtin = "=0.0.0-2026-11-01-0251"
+vstd = "=0.0.0-2026-11-22-0344"
+verus_builtin_macros = "=0.0.0-2026-11-22-0344"
+verus_builtin = "=0.0.0-2026-11-22-0344"
 
 [features]
 default = ["std"]

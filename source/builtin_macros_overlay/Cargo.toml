@@ -1,4 +1,4 @@
-# THIS FILE IS DERIVED from upstream verus_builtin_macros 0.0.0-2026-11-01-0251's
+# THIS FILE IS DERIVED from upstream verus_builtin_macros 0.0.0-2026-11-22-0344's
 # manifest by tools/release/overlay-resync.sh. Do not edit by hand:
 # re-run the resync. Overlay delta: build.rs wiring, the
 # contrib-hooks feature (if pre-seam) as a default feature,
@@ -17,7 +17,7 @@
 [package]
 edition = "2018"
 name = "verus_builtin_macros"
-version = "0.0.0-2026-11-01-0251"
+version = "0.0.0-2026-11-22-0344"
 build = "build.rs"
 autolib = false
 autobins = false
@@ -25,7 +25,6 @@ autoexamples = false
 autotests = false
 autobenches = false
 description = "Verus Builtin Macros: Various macros used by Verus"
-homepage = "https://github.com/verus-lang/verus"
 readme = "README.md"
 keywords = [
     "verus",

@@ -25,7 +25,7 @@ resolver = "2"
 # Mirrors the Verus release line this tree is synced against (the vstd /
 # verus_builtin_macros pin). Maintained by tools/release/sync-verus.sh;
 # release.yml tags `verus-<date>` from this string.
-version = "0.0.0-2026-11-01-0251"
+version = "0.0.0-2026-11-22-0344"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/verus-lang/verus-spec-check"
