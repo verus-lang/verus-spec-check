@@ -100,9 +100,9 @@ edition = "2021"
 path = "src/lib.rs"
 
 [dependencies]
-vstd = "=0.0.0-2026-11-01-0251"
-verus_spec_check = { git = "https://github.com/verus-lang/verus-spec-check", tag = "verus-2026-11-02" }
-verus_spec_check_vstd_ext = { git = "https://github.com/verus-lang/verus-spec-check", tag = "verus-2026-11-02" }
+vstd = "=0.0.0-2026-11-22-0344"
+verus_spec_check = { git = "https://github.com/verus-lang/verus-spec-check", tag = "verus-2026-11-22" }
+verus_spec_check_vstd_ext = { git = "https://github.com/verus-lang/verus-spec-check", tag = "verus-2026-11-22" }
 
 [package.metadata.verus]
 verify = true
@@ -110,12 +110,12 @@ verify = true
 # substitutes the verus-spec-check overlay for the stock verus_builtin_macros,
 # which is what makes `verus!` process the #[vcheck] attribute
 [patch.crates-io]
-verus_builtin_macros = { git = "https://github.com/verus-lang/verus-spec-check", tag = "verus-2026-11-02" }
+verus_builtin_macros = { git = "https://github.com/verus-lang/verus-spec-check", tag = "verus-2026-11-22" }
 ```
 
 Keep the `=` in the `vstd` requirement, as each release is built against
 exactly one `vstd` version. The Verus binary must come from the same release, e.g.
-`0.2026.11.02.8bf68ee` for
+`0.2026.11.22.1ce6a59` for
 the tag above. Download it from the
 [Verus releases](https://github.com/verus-lang/verus/releases), or run
 `nix develop` in a checkout of the tag.
